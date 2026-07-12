@@ -9,6 +9,9 @@ import { MetricCard } from '@/components/ui/MetricCard';
 
 function ProfilePhoto() {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const imgRef = useCallback((el: HTMLImageElement | null) => {
+    if (el?.complete) setImgLoaded(true);
+  }, []);
 
   return (
     <div className="flex justify-center md:justify-start mb-8">
@@ -39,9 +42,7 @@ function ProfilePhoto() {
               <img
                 src={PROFILE_PHOTO}
                 alt="Prabhat Kumar"
-                ref={useCallback((el: HTMLImageElement | null) => {
-                  if (el?.complete) setImgLoaded(true);
-                }, [])}
+                ref={imgRef}
                 className={`absolute inset-0 w-full h-full object-cover object-center rounded-full transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setImgLoaded(true)}
               />

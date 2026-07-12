@@ -15,8 +15,6 @@ interface ContribModalProps {
 
 export function ContribModal({ isOpen, onClose, title, accentColor, contributions }: ContribModalProps) {
   const accent = accentColor === 'cyan' ? '#00D9FF' : '#7B61FF';
-  const accentBg = accentColor === 'cyan' ? 'rgba(0,217,255,0.08)' : 'rgba(123,97,255,0.08)';
-  const accentBorder = accentColor === 'cyan' ? 'rgba(0,217,255,0.2)' : 'rgba(123,97,255,0.2)';
 
   useEffect(() => {
     if (!isOpen) return;
