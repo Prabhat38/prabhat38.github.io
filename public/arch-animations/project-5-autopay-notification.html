@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Autopay Notification Service — Architecture</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#02020f;overflow:hidden;font-family:'Segoe UI',sans-serif;}
+  #flow-menu{position:fixed;left:0;top:0;bottom:0;width:220px;background:rgba(2,4,20,.92);border-right:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;padding:24px 0 16px;z-index:100;backdrop-filter:blur(8px);}
+  .menu-hdr{color:rgba(255,255,255,.38);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:0 18px 18px;}
+  .flow-btn{display:flex;align-items:flex-start;gap:10px;padding:12px 18px;cursor:pointer;border-left:3px solid transparent;transition:background .2s,border-color .2s;}
+  .flow-btn:hover{background:rgba(255,255,255,.05);}
+  .flow-btn.active{background:rgba(255,255,255,.07);border-left-color:currentColor;}
+  .flow-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+  .flow-name{color:#eee;font-size:13px;font-weight:600;line-height:1.3;}
+  .flow-desc{color:rgba(255,255,255,.38);font-size:10.5px;margin-top:2px;line-height:1.4;}
+  #canvas-wrap{position:fixed;left:220px;top:0;width:calc(100% - 220px);height:100%;}
+  #canvas-wrap canvas{width:100%!important;height:100%!important;display:block;}
+  #proj-title{position:fixed;top:18px;left:240px;z-index:50;color:rgba(255,255,255,.7);font-size:13px;letter-spacing:.06em;pointer-events:none;}
+  #proj-title span{color:rgba(255,255,255,.28);margin-right:8px;}
+  .lbl{position:absolute;pointer-events:none;transform:translate(-50%,0);text-align:center;background:rgba(2,2,16,.75);padding:3px 8px;border-radius:4px;line-height:1.35;max-width:160px;}
+  .lbl-main{color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;}
+  .lbl-sub{color:rgba(255,255,255,.48);font-size:9px;}
+</style>
+</head>
+<body>
+<div id="flow-menu">
+  <div class="menu-hdr">Request Flows</div>
+  <div class="flow-btn active" data-flow="core-routing" style="color:#22ee77">
+    <div class="flow-dot" style="background:#22ee77"></div>
+    <div><div class="flow-name">Core Routing</div><div class="flow-desc">ES Percolator rule match · Enrich payload · Reminder pipeline</div></div>
+  </div>
+  <div class="flow-btn" data-flow="error-handling" style="color:#ff4444">
+    <div class="flow-dot" style="background:#ff4444"></div>
+    <div><div class="flow-name">Error Handling</div><div class="flow-desc">ES retry with backoff · Retries exhausted → PagerDuty alert</div></div>
+  </div>
+</div>
+<div id="proj-title"><span>PROJECT 5</span>Autopay Notification Service</div>
+<div id="canvas-wrap">
+  <div id="lc" style="position:absolute;inset:0;pointer-events:none;z-index:10;overflow:hidden;"></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { Timer } from 'three/addons/misc/Timer.js';
+import {OrbitControls}   from 'three/addons/controls/OrbitControls.js';
+import {EffectComposer}  from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass}      from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const MENU=220,cW=()=>window.innerWidth-MENU,cH=()=>window.innerHeight;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x02020f);
+scene.fog=new THREE.FogExp2(0x02020f,.010);
+
+const camera=new THREE.PerspectiveCamera(60,cW()/cH(),.1,300);
+camera.position.set(2.0,1.5,26);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(cW(),cH());
+document.getElementById('canvas-wrap').insertBefore(renderer.domElement,document.getElementById('lc'));
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=.08;
+controls.autoRotate=true;controls.autoRotateSpeed=.18;
+controls.target.set(2.0,1.5,0);
+
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(cW(),cH()),.85,.45,.12);
+composer.addPass(bloom);
+
+scene.add(new THREE.AmbientLight(0xffffff,.35));
+const dirL=new THREE.DirectionalLight(0xffffff,.6);
+dirL.position.set(5,12,8);scene.add(dirL);
+
+// ── Nodes ─────────────────────────────────────────────────────────────────────
+// Staggered y so labels never share the same canvas row:
+// autopay(-10,+2) → kafka_ap(-4,-2.5) → consumers(2,+2) ↕ es(2,+8.5) → kafka_rem(8.5,-2) → reminder(14,+1.5)
+// ERR only: alerts(2,-8.5) forms below when autopay/kafka_ap dissolve
+const NODES={
+  autopay:  {p:[-10.0,  2.0, 1.5], c:0x44ddff, label:'AUTOPAY SERVICE',  sub:'Success / failure / retry / exhausted events', type:'client' },
+  kafka_ap: {p:[ -4.0, -2.5, 1.2], c:0xff9933, label:'KAFKA AUTOPAY',    sub:'Inbound stream · All lifecycle stages',        type:'cache'  },
+  consumers:{p:[  2.0,  2.0, 0.8], c:0x22ee77, label:'KAFKA CONSUMERS',  sub:'Read events · Match rules · Enrich payload',   type:'server' },
+  es:       {p:[  2.0,  8.5, 0.3], c:0xffaa00, label:'ELASTICSEARCH',    sub:'Percolator · ~100 rules · Priority match wins', type:'es'     },
+  kafka_rem:{p:[  8.5, -2.0, 0.0], c:0xaa44ff, label:'KAFKA REMINDER',   sub:'Outbound enriched payloads to Reminder',       type:'cache'  },
+  reminder: {p:[ 14.0,  1.5,-0.5], c:0x9955ff, label:'REMINDER SERVICE', sub:'Push · SMS · Email · WhatsApp to user',        type:'obs'    },
+  alerts:   {p:[  2.0, -8.5, 0.4], c:0xff4444, label:'PAGERDUTY / SLACK',sub:'Failure metrics · ES unavailability alerts',   type:'obs'    },
+};
+
+function stdMat(c){return new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.22,roughness:.55,metalness:.35,transparent:true,opacity:0});}
+function nodeGeo(t){
+  switch(t){
+    case'client':    return new THREE.SphereGeometry(.52,32,24);
+    case'gateway':   return new THREE.OctahedronGeometry(.52,0);
+    case'lb':        return new THREE.CylinderGeometry(.38,.48,.72,6);
+    case'server':    return new THREE.BoxGeometry(.82,.82,.82);
+    case'processor': return new THREE.BoxGeometry(.78,.62,.78);
+    case'cache':     return new THREE.CylinderGeometry(.46,.46,.88,16);
+    case'es':        return new THREE.TorusGeometry(.42,.18,12,24);
+    case'obs':       return new THREE.IcosahedronGeometry(.5,0);
+    default:         return new THREE.SphereGeometry(.48,16,12);
+  }
+}
+
+const nodeObjs={},nodeLights={},labelDivs={};
+const lc=document.getElementById('lc');
+for(const[id,nd]of Object.entries(NODES)){
+  const m=new THREE.Mesh(nodeGeo(nd.type),stdMat(nd.c));
+  m.position.set(...nd.p);scene.add(m);nodeObjs[id]=m;
+  const pl=new THREE.PointLight(nd.c,0,7.0);
+  pl.position.set(...nd.p);scene.add(pl);nodeLights[id]=pl;
+  const d=document.createElement('div');
+  d.className='lbl';d.style.display='none';
+  d.innerHTML=`<div class="lbl-main">${nd.label}</div><div class="lbl-sub">${nd.sub}</div>`;
+  lc.appendChild(d);labelDivs[id]=d;
+}
+
+// ── Dust ──────────────────────────────────────────────────────────────────────
+const DUST_N=32,DUST_DUR=.7,dustSys={};
+for(const[id,nd]of Object.entries(NODES)){
+  const pos=new Float32Array(DUST_N*3);
+  for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0];pos[i*3+1]=nd.p[1];pos[i*3+2]=nd.p[2];}
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:nd.c,size:.09,transparent:true,opacity:0,sizeAttenuation:true,depthWrite:false});
+  const pts=new THREE.Points(geo,mat);scene.add(pts);
+  const dirs=Array.from({length:DUST_N},()=>new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize());
+  dustSys[id]={pts,geo,mat,dirs,phase:'idle',t:0};
+}
+
+// ── Connections ───────────────────────────────────────────────────────────────
+const CORE='core-routing',ERR='error-handling';
+const CDEFS=[
+  {a:'autopay',  b:'kafka_ap',  c:0x44ddff, flows:[CORE]},
+  {a:'kafka_ap', b:'consumers', c:0xff9933, flows:[CORE]},
+  {a:'consumers',b:'es',        c:0x22ee77, flows:[CORE,ERR]},
+  {a:'consumers',b:'kafka_rem', c:0xaa44ff, flows:[CORE,ERR]},
+  {a:'kafka_rem',b:'reminder',  c:0x9955ff, flows:[CORE,ERR]},
+  {a:'consumers',b:'alerts',    c:0xff4444, flows:[ERR]},
+];
+const connLines=[];
+for(const cd of CDEFS){
+  const pa=new THREE.Vector3(...NODES[cd.a].p),pb=new THREE.Vector3(...NODES[cd.b].p);
+  const mat=new THREE.LineBasicMaterial({color:cd.c,transparent:true,opacity:0});
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([pa,pb]),mat);
+  scene.add(line);
+  connLines.push({line,flows:cd.flows,phase:'idle',t:0});
+}
+
+// ── Curves ────────────────────────────────────────────────────────────────────
+const CV={};
+function mkC(a,b,key,bend=[0,0,0]){
+  const pa=new THREE.Vector3(...NODES[a].p),pb=new THREE.Vector3(...NODES[b].p);
+  CV[key]=new THREE.CatmullRomCurve3([pa,pa.clone().add(pb).multiplyScalar(.5).add(new THREE.Vector3(...bend)),pb]);
+}
+mkC('autopay',  'kafka_ap',  'ap>kap',  [ 0.0, -0.5,  0.4]);  // arc down from y=2 to y=-2.5
+mkC('kafka_ap', 'consumers', 'kap>con', [ 0.0,  0.5,  0.3]);  // arc up from y=-2.5 to y=2
+mkC('consumers','es',        'con>es',  [-1.5,  0.5,  0.3]);  // left arc up to ES at y=8.5
+mkC('consumers','kafka_rem', 'con>rem', [ 1.5, -0.5, -0.2]);  // arc down-right to y=-2
+mkC('kafka_rem','reminder',  'rem>rms', [ 0.0,  0.8, -0.2]);  // arc up from y=-2 to y=1.5
+mkC('consumers','alerts',    'con>alt', [ 0.0, -2.0,  0.3]);  // drops from y=2 to y=-8.5
+
+// ── Flow node sets ────────────────────────────────────────────────────────────
+const FN={
+  [CORE]: new Set(['autopay','kafka_ap','consumers','es','kafka_rem','reminder']),
+  [ERR]:  new Set(['consumers','es','kafka_rem','reminder','alerts']),
+};
+const FC={[CORE]:20,[ERR]:20};
+
+// Per-flow camera
+// CORE: wide view x=-10→14, staggered y=-2.5→8.5; centred at (2,1.5), z=34
+// ERR:  tighter, centred on consumers(2,2)/ES(2,8.5)/alerts(2,-8.5) column, z=26
+const FLOW_CAM={
+  [CORE]:{pos:new THREE.Vector3( 2.0, 1.5,34), tgt:new THREE.Vector3( 2.0, 1.5,0)},
+  [ERR]: {pos:new THREE.Vector3( 2.0,-0.5,26), tgt:new THREE.Vector3( 2.0,-0.5,0)},
+};
+let camTransition=null;
+
+// ── Packets ───────────────────────────────────────────────────────────────────
+const PD=[
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // CORE ROUTING  cycle=20s
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── Phase 1 — Payment Success notification (0–9s) ─────────────────────────
+  {cv:'ap>kap',  col:0x88eeff, flow:CORE, delay:0.00, dur:.45},              // autopay publishes success event
+  {cv:'kap>con', col:0x88eeff, flow:CORE, delay:0.40, dur:.50},              // consumer reads from topic
+  {cv:'con>es',  col:0x44ffaa, flow:CORE, delay:0.85, dur:.60},              // ES percolator call: match rules
+  {cv:'con>es',  col:0xffee66, flow:CORE, delay:1.45, dur:.55, rev:true},    // rule matched → payment_success → push+SMS
+  {cv:'con>rem', col:0xcc88ff, flow:CORE, delay:2.00, dur:.55},              // publish enriched payload to reminder topic
+  {cv:'rem>rms', col:0xcc88ff, flow:CORE, delay:2.55, dur:.50},              // reminder triggers push+SMS to user
+
+  // ── Phase 2 — Payment Failure notification (11–19s) ───────────────────────
+  {cv:'ap>kap',  col:0xff9966, flow:CORE, delay:11.00, dur:.45},             // autopay publishes failure event
+  {cv:'kap>con', col:0xff9966, flow:CORE, delay:11.40, dur:.50},
+  {cv:'con>es',  col:0xff9966, flow:CORE, delay:11.85, dur:.60},             // ES percolator: match failure rules
+  {cv:'con>es',  col:0xffee66, flow:CORE, delay:12.45, dur:.55, rev:true},   // matched → failure → SMS+email+WhatsApp
+  {cv:'con>rem', col:0xff88cc, flow:CORE, delay:13.00, dur:.55},
+  {cv:'rem>rms', col:0xff88cc, flow:CORE, delay:13.55, dur:.50},
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // ERROR HANDLING  cycle=20s
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── Phase 1 — ES Failure → Retry → Success (0–9s) ────────────────────────
+  {cv:'con>es',  col:0xff4444, flow:ERR, delay:0.00, dur:.55},               // ES call attempt 1 — fails
+  {cv:'con>es',  col:0xff7733, flow:ERR, delay:1.20, dur:.55},               // retry with exponential backoff
+  {cv:'con>es',  col:0xff9922, flow:ERR, delay:2.60, dur:.55},               // retry attempt 3 — success
+  {cv:'con>es',  col:0xffee66, flow:ERR, delay:3.15, dur:.55, rev:true},     // rule returned from ES
+  {cv:'con>rem', col:0xaa66ff, flow:ERR, delay:3.70, dur:.55},               // publish enriched payload
+  {cv:'rem>rms', col:0xaa66ff, flow:ERR, delay:4.25, dur:.50},               // reminder delivers notification
+
+  // ── Phase 2 — Retries Exhausted → PagerDuty Alert (11–19s) ───────────────
+  {cv:'con>es',  col:0xff3333, flow:ERR, delay:11.00, dur:.55},              // attempt 1 — fails
+  {cv:'con>es',  col:0xff2222, flow:ERR, delay:12.20, dur:.55},              // retry — fails
+  {cv:'con>es',  col:0xff1111, flow:ERR, delay:13.60, dur:.55},              // retry — fails (all exhausted)
+  {cv:'con>alt', col:0xff4444, flow:ERR, delay:14.50, dur:.70},              // log + metric → PagerDuty/Slack alert
+];
+
+const TS=.055,TN=4,packets=[];
+for(const pd of PD){
+  const h=new THREE.Mesh(new THREE.SphereGeometry(.13,10,8),new THREE.MeshBasicMaterial({color:pd.col}));
+  h.visible=false;scene.add(h);
+  const tr=[];
+  for(let i=1;i<=TN;i++){
+    const s=new THREE.Mesh(new THREE.SphereGeometry(.13*(1-i*.18),10,8),
+      new THREE.MeshBasicMaterial({color:pd.col,transparent:true,opacity:1-i*.2}));
+    s.visible=false;scene.add(s);tr.push(s);
+  }
+  packets.push({...pd,h,tr});
+}
+
+// ── Flow state ────────────────────────────────────────────────────────────────
+let activeFlow=CORE,cycleT=0;
+
+function triggerTransitions(prev,next){
+  for(const id of Object.keys(NODES)){
+    const was=FN[prev].has(id),now=FN[next].has(id),d=dustSys[id];
+    if(was&&!now){d.phase='dissolve';d.t=0;}
+    else if(!was&&now){d.phase='form';d.t=0;}
+  }
+  for(const cl of connLines){
+    const was=cl.flows.includes(prev),will=cl.flows.includes(next);
+    if(was&&!will){cl.phase='dissolve';cl.t=0;}
+    else if(!was&&will){cl.phase='form';cl.t=0;}
+  }
+}
+function setFlow(id){
+  if(id===activeFlow)return;
+  triggerTransitions(activeFlow,id);
+  activeFlow=id;cycleT=0;
+  document.querySelectorAll('.flow-btn').forEach(el=>el.classList.toggle('active',el.dataset.flow===id));
+  const fc=FLOW_CAM[id];
+  camTransition={fromPos:camera.position.clone(),fromTgt:controls.target.clone(),
+    toPos:fc.pos.clone(),toTgt:fc.tgt.clone(),t:0,dur:1.2};
+}
+document.querySelectorAll('.flow-btn').forEach(btn=>btn.addEventListener('click',()=>setFlow(btn.dataset.flow)));
+
+setTimeout(()=>{
+  [...FN[CORE]].forEach((id,i)=>setTimeout(()=>{dustSys[id].phase='form';dustSys[id].t=0;},i*100));
+  connLines.forEach(cl=>{if(cl.flows.includes(CORE)){cl.phase='form';cl.t=0;}});
+},250);
+
+// ── Animate — capped to 60fps so autoRotate is frame-rate independent ─────────
+const clock=new Timer(),tv=new THREE.Vector3();
+const TARGET_MS=1000/60;let accumMs=0;
+function animate(){
+  requestAnimationFrame(animate);
+  clock.update();
+  const rawDt=clock.getDelta();
+  accumMs+=rawDt*1000;
+  if(accumMs<TARGET_MS)return;
+  const dt=Math.min(accumMs/1000,.05);
+  accumMs=0;
+  cycleT=(cycleT+dt)%FC[activeFlow];
+  if(camTransition){
+    camTransition.t=Math.min(camTransition.t+dt,camTransition.dur);
+    const tt=camTransition.t/camTransition.dur;
+    const ease=tt<.5?2*tt*tt:-1+(4-2*tt)*tt;
+    camera.position.lerpVectors(camTransition.fromPos,camTransition.toPos,ease);
+    controls.target.lerpVectors(camTransition.fromTgt,camTransition.toTgt,ease);
+    camera.lookAt(controls.target);
+    if(camTransition.t>=camTransition.dur){camTransition=null;}
+  }else{
+    controls.update();
+  }
+
+  for(const[id,d]of Object.entries(dustSys)){
+    const nd=NODES[id],m=nodeObjs[id],on=FN[activeFlow].has(id);
+    const pos=d.geo.attributes.position.array;
+    if(d.phase==='idle'){m.material.opacity=on?1:0;nodeLights[id].intensity=on?1.2:0;d.mat.opacity=0;continue;}
+    d.t=Math.min(d.t+dt,DUST_DUR);
+    const t=d.t/DUST_DUR;
+    if(d.phase==='dissolve'){
+      m.material.opacity=1-t;nodeLights[id].intensity=(1-t)*1.2;
+      d.mat.opacity=Math.sin(t*Math.PI)*.9;
+      const sp=t*t*3;
+      for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0]+d.dirs[i].x*sp;pos[i*3+1]=nd.p[1]+d.dirs[i].y*sp;pos[i*3+2]=nd.p[2]+d.dirs[i].z*sp;}
+      if(d.t>=DUST_DUR){d.phase='idle';m.material.opacity=0;nodeLights[id].intensity=0;d.mat.opacity=0;}
+    }else{
+      m.material.opacity=t>.45?(t-.45)/.55:0;nodeLights[id].intensity=m.material.opacity*1.2;
+      d.mat.opacity=(1-t)*.9;
+      const sp=(1-t)*(1-t)*3;
+      for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0]+d.dirs[i].x*sp;pos[i*3+1]=nd.p[1]+d.dirs[i].y*sp;pos[i*3+2]=nd.p[2]+d.dirs[i].z*sp;}
+      if(d.t>=DUST_DUR){d.phase='idle';m.material.opacity=1;nodeLights[id].intensity=1.2;d.mat.opacity=0;}
+    }
+    d.geo.attributes.position.needsUpdate=true;
+  }
+
+  for(const cl of connLines){
+    const active=cl.flows.includes(activeFlow),maxOp=.55;
+    if(cl.phase==='idle'){cl.line.material.opacity=active?maxOp:0;continue;}
+    cl.t=Math.min(cl.t+dt,DUST_DUR);
+    const t=cl.t/DUST_DUR;
+    if(cl.phase==='dissolve'){
+      cl.line.material.opacity=(1-t)*maxOp;
+      if(cl.t>=DUST_DUR){cl.phase='idle';cl.line.material.opacity=0;}
+    }else{
+      cl.line.material.opacity=t*maxOp;
+      if(cl.t>=DUST_DUR){cl.phase='idle';cl.line.material.opacity=maxOp;}
+    }
+  }
+
+  const CYCLE=FC[activeFlow];
+  for(const pk of packets){
+    if(pk.flow!==activeFlow){pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);continue;}
+    const local=((cycleT-pk.delay)%CYCLE+CYCLE)%CYCLE;
+    if(local<pk.dur){
+      const t=local/pk.dur,crv=CV[pk.cv];
+      if(!crv){pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);continue;}
+      const tPos=pk.rev?(1-t):t;
+      crv.getPoint(tPos,pk.h.position);pk.h.visible=true;
+      pk.tr.forEach((s,i)=>{
+        const tt=pk.rev?Math.min(1,tPos+(i+1)*TS):Math.max(0,tPos-(i+1)*TS);
+        crv.getPoint(tt,s.position);s.visible=true;
+      });
+    }else{pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);}
+  }
+
+  const W2=cW()/2,H2=cH()/2;
+  for(const[id,m]of Object.entries(nodeObjs)){
+    if(m.material.opacity<.05){labelDivs[id].style.display='none';continue;}
+    tv.copy(m.position);tv.project(camera);
+    const d=labelDivs[id];
+    d.style.left=(tv.x*W2+W2)+'px';d.style.top=(-(tv.y*H2)+H2+18)+'px';
+    d.style.display=tv.z<1?'block':'none';d.style.opacity=m.material.opacity;
+  }
+  composer.render();
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  const W=cW(),H=cH();
+  camera.aspect=W/H;camera.updateProjectionMatrix();
+  renderer.setSize(W,H);composer.setSize(W,H);bloom.resolution.set(W,H);
+});
+</script>
+</body>
+</html>

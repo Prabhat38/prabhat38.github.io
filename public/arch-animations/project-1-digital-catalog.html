@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Digital Catalog Service — Architecture</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#02020f; overflow:hidden; font-family:'Segoe UI',sans-serif; }
+  #flow-menu {
+    position:fixed; left:0; top:0; bottom:0; width:220px;
+    background:rgba(2,4,20,0.92); border-right:1px solid rgba(255,255,255,0.07);
+    display:flex; flex-direction:column; padding:24px 0 16px; z-index:100;
+    backdrop-filter:blur(8px);
+  }
+  .menu-hdr { color:rgba(255,255,255,0.38); font-size:10px; font-weight:700;
+    letter-spacing:.12em; text-transform:uppercase; padding:0 18px 18px; }
+  .flow-btn { display:flex; align-items:flex-start; gap:10px; padding:12px 18px;
+    cursor:pointer; border-left:3px solid transparent; transition:background .2s,border-color .2s; }
+  .flow-btn:hover { background:rgba(255,255,255,.05); }
+  .flow-btn.active { background:rgba(255,255,255,.07); border-left-color:currentColor; }
+  .flow-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+  .flow-name { color:#eee; font-size:13px; font-weight:600; line-height:1.3; }
+  .flow-desc { color:rgba(255,255,255,.38); font-size:10.5px; margin-top:2px; line-height:1.4; }
+  #canvas-wrap { position:fixed; left:220px; top:0; width:calc(100% - 220px); height:100%; }
+  #canvas-wrap canvas { width:100%!important; height:100%!important; display:block; }
+  #proj-title { position:fixed; top:18px; left:240px; z-index:50;
+    color:rgba(255,255,255,.7); font-size:13px; letter-spacing:.06em; pointer-events:none; }
+  #proj-title span { color:rgba(255,255,255,.28); margin-right:8px; }
+  .lbl { position:absolute; pointer-events:none; transform:translate(-50%,0);
+    text-align:center; background:rgba(2,2,16,.75); padding:3px 8px;
+    border-radius:4px; line-height:1.35; }
+  .lbl-main { color:#fff; font-size:11px; font-weight:700; letter-spacing:.04em; }
+  .lbl-sub  { color:rgba(255,255,255,.48); font-size:9px; }
+</style>
+</head>
+<body>
+<div id="flow-menu">
+  <div class="menu-hdr">Request Flows</div>
+  <div class="flow-btn active" data-flow="client-read" style="color:#4488ff">
+    <div class="flow-dot" style="background:#4488ff"></div>
+    <div><div class="flow-name">Client Read</div><div class="flow-desc">5 000 RPS · 3-tier cache fallback</div></div>
+  </div>
+  <div class="flow-btn" data-flow="admin-crud" style="color:#ff6688">
+    <div class="flow-dot" style="background:#ff6688"></div>
+    <div><div class="flow-name">Admin CRUD</div><div class="flow-desc">Write + audit via Kafka</div></div>
+  </div>
+  <div class="flow-btn" data-flow="bulk-csv" style="color:#ffcc44">
+    <div class="flow-dot" style="background:#ffcc44"></div>
+    <div><div class="flow-name">Bulk CSV Upload</div><div class="flow-desc">S3 ingest · async processor</div></div>
+  </div>
+  <div class="flow-btn" data-flow="image-upload" style="color:#ff8822">
+    <div class="flow-dot" style="background:#ff8822"></div>
+    <div><div class="flow-name">Image Upload</div><div class="flow-desc">S3 store · search index update</div></div>
+  </div>
+</div>
+<div id="proj-title"><span>PROJECT 1</span>Digital Catalog Service</div>
+<div id="canvas-wrap">
+  <div id="lc" style="position:absolute;inset:0;pointer-events:none;z-index:10;overflow:hidden;"></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { Timer } from 'three/addons/misc/Timer.js';
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const MENU=220, cW=()=>window.innerWidth-MENU, cH=()=>window.innerHeight;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x02020f);
+scene.fog=new THREE.FogExp2(0x02020f,.014);
+
+const camera=new THREE.PerspectiveCamera(60,cW()/cH(),.1,300);
+camera.position.set(2.0,1.0,28);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(cW(),cH());
+const wrap=document.getElementById('canvas-wrap');
+wrap.insertBefore(renderer.domElement,wrap.firstChild);
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=.08;
+controls.autoRotate=true; controls.autoRotateSpeed=.18;
+controls.target.set(2.0,0,0);
+
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(cW(),cH()),.85,.45,.12);
+composer.addPass(bloom);
+
+scene.add(new THREE.AmbientLight(0xffffff,.35));
+const dirL=new THREE.DirectionalLight(0xffffff,.6);
+dirL.position.set(5,12,8); scene.add(dirL);
+
+// ── Nodes ─────────────────────────────────────────────────────────────────────
+// Single shared LB (rule-based routing for both client and admin traffic)
+// Two admin servers mirroring the two client app servers
+// Positions scaled ~1.6× for clear visual separation at every camera angle
+const NODES={
+  client:   {p:[-14.0, 2.0, 3.5], c:0x3d7fff, label:'CLIENT',          sub:'iOS · Android · Web',                    type:'client'   },
+  apigw:    {p:[ -9.2, 2.0, 3.0], c:0x00c0ff, label:'API GATEWAY',     sub:'Auth · Rate Limit · Route',              type:'gateway'  },
+  lb:       {p:[ -4.5, 0,   0  ], c:0x00ddcc, label:'LOAD BALANCER',   sub:'Rule-based · Client & Admin Routing',    type:'lb'       },
+  admin:    {p:[-14.0,-3.5,-3.5], c:0xff5577, label:'ADMIN PANEL',     sub:'Internal UI · Role-based',               type:'monitor'  },
+  capp1:    {p:[  1.5, 6.5, 2.5], c:0x22ee77, label:'APP SERVER 1',    sub:'Client-facing · Java',                   type:'server'   },
+  capp2:    {p:[  1.5, 3.0, 1.0], c:0x22ee77, label:'APP SERVER 2',    sub:'Client-facing · Java',                   type:'server'   },
+  aapp1:    {p:[  1.5,-2.0,-1.8], c:0xffaa22, label:'ADMIN SERVER 1',  sub:'Admin-facing · Java',                    type:'server'   },
+  aapp2:    {p:[  1.5,-5.0,-2.8], c:0xffaa22, label:'ADMIN SERVER 2',  sub:'Admin-facing · Java',                    type:'server'   },
+  bulk:     {p:[  1.5,-8.0,-1.0], c:0xffcc55, label:'BULK PROCESSOR',  sub:'Scheduled Threads · Async',              type:'processor'},
+  aerospike:{p:[  7.5, 6.0, 1.8], c:0xff6611, label:'AEROSPIKE',       sub:'Hot Cache · 24h TTL Fallback',           type:'cache'    },
+  es:       {p:[ 13.0, 2.5,-0.5], c:0x3388ff, label:'ELASTICSEARCH',   sub:'Catalog Index · Audit Index',            type:'es'       },
+  mysql:    {p:[ 18.0,-1.0,-2.0], c:0x9933ff, label:'MYSQL',           sub:'Source of Truth',                        type:'db'       },
+  kafka:    {p:[  7.5,-6.5,-2.0], c:0xeecc00, label:'KAFKA',           sub:'Event Pipeline',                         type:'queue'    },
+  kconsume: {p:[ 13.0,-4.0, 0.5], c:0x77ee33, label:'KAFKA CONSUMERS', sub:'ES Writers · Scalable',                  type:'server'   },
+  s3:       {p:[ 13.0,-8.5, 1.2], c:0xff8822, label:'AWS S3',          sub:'CSVs · Images · Output Files',           type:'s3'       },
+  obs:      {p:[ 18.0, 7.0, 1.5], c:0x55eebb, label:'OBSERVABILITY',   sub:'Prometheus · Grafana · PagerDuty',       type:'obs'      },
+};
+
+function stdMat(c){return new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.22,roughness:.55,metalness:.35,transparent:true,opacity:0});}
+function nodeGeo(t){
+  switch(t){
+    case'client':   return new THREE.SphereGeometry(.52,32,24);
+    case'gateway':  return new THREE.OctahedronGeometry(.52,0);
+    case'lb':       return new THREE.CylinderGeometry(.38,.48,.72,6);
+    case'server':   return new THREE.BoxGeometry(.82,.82,.82);
+    case'processor':return new THREE.BoxGeometry(.78,.62,.78);
+    case'cache':    return new THREE.CylinderGeometry(.46,.46,.88,16);
+    case'es':       return new THREE.TorusGeometry(.42,.18,12,24);
+    case'db':       return new THREE.CylinderGeometry(.46,.46,.88,16);
+    case'queue':    return new THREE.TorusKnotGeometry(.32,.11,64,8);
+    case's3':       return new THREE.BoxGeometry(.76,.76,.76);
+    case'obs':      return new THREE.IcosahedronGeometry(.5,0);
+    case'monitor':  return new THREE.BoxGeometry(.88,.68,.48);
+    default:        return new THREE.SphereGeometry(.48,16,12);
+  }
+}
+
+const nodeObjs={},nodeLights={},labelDivs={};
+const lc=document.getElementById('lc');
+for(const[id,nd]of Object.entries(NODES)){
+  const m=new THREE.Mesh(nodeGeo(nd.type),stdMat(nd.c));
+  m.position.set(...nd.p); scene.add(m); nodeObjs[id]=m;
+  const pl=new THREE.PointLight(nd.c,0,7.0);
+  pl.position.set(...nd.p); scene.add(pl); nodeLights[id]=pl;
+  const d=document.createElement('div');
+  d.className='lbl'; d.style.display='none';
+  d.innerHTML=`<div class="lbl-main">${nd.label}</div><div class="lbl-sub">${nd.sub}</div>`;
+  lc.appendChild(d); labelDivs[id]=d;
+}
+
+// ── Dust per node ─────────────────────────────────────────────────────────────
+const DUST_N=32, DUST_DUR=.7;
+const dustSys={};
+for(const[id,nd]of Object.entries(NODES)){
+  const pos=new Float32Array(DUST_N*3);
+  for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0];pos[i*3+1]=nd.p[1];pos[i*3+2]=nd.p[2];}
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:nd.c,size:.09,transparent:true,opacity:0,sizeAttenuation:true,depthWrite:false});
+  const pts=new THREE.Points(geo,mat); scene.add(pts);
+  const dirs=Array.from({length:DUST_N},()=>new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize());
+  dustSys[id]={pts,geo,mat,dirs,phase:'idle',t:0};
+}
+
+// ── Connections ───────────────────────────────────────────────────────────────
+const AF=['client-read','admin-crud','bulk-csv','image-upload'];
+const CDEFS=[
+  // ── Client path ──────────────────────────────────────────────────────────
+  {a:'client', b:'apigw', c:0x3d7fff,flows:['client-read']},
+  {a:'apigw',  b:'lb',    c:0x00c0ff,flows:['client-read']},
+  {a:'lb',     b:'capp1', c:0x00ddcc,flows:['client-read']},
+  {a:'lb',     b:'capp2', c:0x00ddcc,flows:['client-read']},
+  {a:'capp1',  b:'aerospike',c:0xff6611,flows:['client-read']},
+  {a:'capp2',  b:'aerospike',c:0xff6611,flows:['client-read']},
+  {a:'capp1',  b:'es',    c:0x3388ff,flows:['client-read']},   // ES fallback
+  {a:'capp1',  b:'mysql', c:0x9933ff,flows:['client-read']},   // MySQL fallback
+  // ── Admin path (same LB, different routing rule) ──────────────────────────
+  {a:'admin',  b:'lb',    c:0xff5577,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'lb',     b:'aapp1', c:0xffaa22,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'lb',     b:'aapp2', c:0xffaa22,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'aapp1',  b:'mysql', c:0x9933ff,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'aapp2',  b:'mysql', c:0x9933ff,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'aapp1',  b:'kafka', c:0xeecc00,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'aapp2',  b:'kafka', c:0xeecc00,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'aapp1',  b:'s3',    c:0xff8822,flows:['bulk-csv','image-upload']},
+  {a:'aapp2',  b:'s3',    c:0xff8822,flows:['bulk-csv','image-upload']},
+  // ── Bulk processor ────────────────────────────────────────────────────────
+  {a:'bulk',   b:'s3',    c:0xff8822,flows:['bulk-csv']},
+  {a:'bulk',   b:'mysql', c:0xffcc55,flows:['bulk-csv']},
+  {a:'bulk',   b:'kafka', c:0xeecc00,flows:['bulk-csv']},
+  // ── Kafka pipeline ────────────────────────────────────────────────────────
+  {a:'kafka',  b:'kconsume',c:0xeecc00,flows:['admin-crud','bulk-csv','image-upload']},
+  {a:'kconsume',b:'es',   c:0x77ee33,flows:['admin-crud','bulk-csv','image-upload']},
+  // ── Observability (each line follows its endpoint node's flows) ───────────
+  {a:'obs',b:'capp1',    c:0x55eebb,flows:['client-read'],obs:true},
+  {a:'obs',b:'capp2',    c:0x55eebb,flows:['client-read'],obs:true},
+  {a:'obs',b:'aerospike',c:0x55eebb,flows:['client-read'],obs:true},
+  {a:'obs',b:'aapp1',    c:0x55eebb,flows:['admin-crud','bulk-csv','image-upload'],obs:true},
+  {a:'obs',b:'aapp2',    c:0x55eebb,flows:['admin-crud','bulk-csv','image-upload'],obs:true},
+  {a:'obs',b:'bulk',     c:0x55eebb,flows:['bulk-csv'],obs:true},
+  {a:'obs',b:'kafka',    c:0x55eebb,flows:['admin-crud','bulk-csv','image-upload'],obs:true},
+  {a:'obs',b:'kconsume', c:0x55eebb,flows:['admin-crud','bulk-csv','image-upload'],obs:true},
+  {a:'obs',b:'es',       c:0x55eebb,flows:AF,obs:true},
+  {a:'obs',b:'mysql',    c:0x55eebb,flows:AF,obs:true},
+  {a:'obs',b:'lb',       c:0x55eebb,flows:AF,obs:true},
+];
+const connLines=[];
+for(const cd of CDEFS){
+  const pa=new THREE.Vector3(...NODES[cd.a].p),pb=new THREE.Vector3(...NODES[cd.b].p);
+  const mat=new THREE.LineBasicMaterial({color:cd.c,transparent:true,opacity:0});
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([pa,pb]),mat);
+  scene.add(line);
+  connLines.push({line,flows:cd.flows,obs:!!cd.obs,phase:'idle',t:0});
+}
+
+// ── Curves ────────────────────────────────────────────────────────────────────
+const CV={};
+function mkC(a,b,key,bend=[0,0,0]){
+  const pa=new THREE.Vector3(...NODES[a].p),pb=new THREE.Vector3(...NODES[b].p);
+  CV[key]=new THREE.CatmullRomCurve3([pa,pa.clone().add(pb).multiplyScalar(.5).add(new THREE.Vector3(...bend)),pb]);
+}
+// client path
+mkC('client', 'apigw',    'c>gw',      [0,  .8, .5]);
+mkC('apigw',  'lb',       'gw>lb',     [0,  .6, .8]);
+mkC('lb',     'capp1',    'lb>c1',     [0, 2.4,1.2]);
+mkC('lb',     'capp2',    'lb>c2',     [0,  .8, .5]);
+mkC('capp1',  'aerospike','c1>aero',   [.3, .5, .4]);
+mkC('capp2',  'aerospike','c2>aero',   [.5,-.2, .4]);
+mkC('capp1',  'es',       'c1>es',     [.8,-2.8,-1.5]); // arcs below aerospike
+mkC('capp1',  'mysql',    'c1>mysql',  [0, -5.5,-1.5]); // arcs well below aero+ES
+// admin path — same LB, separate curves to aapp1/aapp2
+mkC('admin',  'lb',       'ad>lb',     [0,  .8,-.8]);
+mkC('lb',     'aapp1',    'lb>aa1',    [0, -.6,-.6]);
+mkC('lb',     'aapp2',    'lb>aa2',    [0,-1.4,-1.2]);
+mkC('aapp1',  'mysql',    'aa1>mysql', [.8, 1.5, .4]);
+mkC('aapp2',  'mysql',    'aa2>mysql', [.8, 1.0, .5]);
+mkC('aapp1',  'kafka',    'aa1>kfk',   [.5,-.9, .4]);
+mkC('aapp2',  'kafka',    'aa2>kfk',   [.3,-.6, .4]);
+mkC('aapp1',  's3',       'aa1>s3',    [.8,-2.5, .8]);
+mkC('aapp2',  's3',       'aa2>s3',    [.6,-2.0, .8]);
+// bulk
+mkC('bulk',   's3',       'bk>s3',     [.5,-.5, .9]);
+mkC('bulk',   'mysql',    'bk>mysql',  [.8, 2.5, .4]);
+mkC('bulk',   'kafka',    'bk>kfk',    [.3,-.3, .4]);
+// kafka → es
+mkC('kafka',  'kconsume', 'kfk>kc',    [.6,-.5, .9]);
+mkC('kconsume','es',      'kc>es',     [.5, .8, .6]);
+
+// ── Flow meta ─────────────────────────────────────────────────────────────────
+const FN={
+  'client-read': new Set(['client','apigw','lb','capp1','capp2','aerospike','es','mysql','obs']),
+  'admin-crud':  new Set(['admin','lb','aapp1','aapp2','mysql','kafka','kconsume','es','obs']),
+  'bulk-csv':    new Set(['admin','lb','aapp1','aapp2','s3','bulk','mysql','kafka','kconsume','es','obs']),
+  'image-upload':new Set(['admin','lb','aapp1','aapp2','s3','mysql','kafka','kconsume','es','obs']),
+};
+const FC={'client-read':28,'admin-crud':12,'bulk-csv':14,'image-upload':10};
+
+// ── Packets ───────────────────────────────────────────────────────────────────
+// rev:true = traverse same curve backwards (response packet)
+const PD=[
+  // ── client-read : phase 1 — cache HIT via capp1 ──────────────────────────
+  {cv:'c>gw',  col:0x66aaff,flow:'client-read',delay:0,   dur:.75},
+  {cv:'gw>lb', col:0x66aaff,flow:'client-read',delay:.65, dur:.65},
+  {cv:'lb>c1', col:0x66aaff,flow:'client-read',delay:1.2, dur:.65},
+  {cv:'c1>aero',col:0xffaa44,flow:'client-read',delay:1.75,dur:.7},
+  {cv:'c1>aero',col:0xffcc66,flow:'client-read',delay:2.35,dur:.65,rev:true},
+  {cv:'lb>c1', col:0x88ccff,flow:'client-read',delay:2.9, dur:.6, rev:true},
+  {cv:'gw>lb', col:0x88ccff,flow:'client-read',delay:3.4, dur:.6, rev:true},
+  {cv:'c>gw',  col:0x88ccff,flow:'client-read',delay:3.9, dur:.6, rev:true},
+  // phase 2 — cache HIT via capp2
+  {cv:'c>gw',  col:0x44ccff,flow:'client-read',delay:5.5, dur:.75},
+  {cv:'gw>lb', col:0x44ccff,flow:'client-read',delay:6.15,dur:.65},
+  {cv:'lb>c2', col:0x44ccff,flow:'client-read',delay:6.7, dur:.65},
+  {cv:'c2>aero',col:0xffaa44,flow:'client-read',delay:7.25,dur:.7},
+  {cv:'c2>aero',col:0xffcc66,flow:'client-read',delay:7.85,dur:.65,rev:true},
+  {cv:'lb>c2', col:0x88eeee,flow:'client-read',delay:8.4, dur:.6, rev:true},
+  {cv:'gw>lb', col:0x88eeee,flow:'client-read',delay:8.9, dur:.6, rev:true},
+  {cv:'c>gw',  col:0x88eeee,flow:'client-read',delay:9.4, dur:.6, rev:true},
+  // phase 3 — Aero MISS → ES hit → write back to Aero → return
+  {cv:'c>gw',  col:0xaa88ff,flow:'client-read',delay:12.0, dur:.75},
+  {cv:'gw>lb', col:0xaa88ff,flow:'client-read',delay:12.65,dur:.65},
+  {cv:'lb>c1', col:0xaa88ff,flow:'client-read',delay:13.2, dur:.65},
+  {cv:'c1>aero',col:0xff3300,flow:'client-read',delay:13.75,dur:.6},
+  {cv:'c1>aero',col:0x882200,flow:'client-read',delay:14.25,dur:.5, rev:true},
+  {cv:'c1>es', col:0x4488ff,flow:'client-read',delay:14.65,dur:.9},
+  {cv:'c1>es', col:0x44ccff,flow:'client-read',delay:15.45,dur:.8, rev:true},
+  {cv:'c1>aero',col:0xff8800,flow:'client-read',delay:16.15,dur:.6},
+  {cv:'c1>aero',col:0xff9944,flow:'client-read',delay:16.65,dur:.5, rev:true},
+  {cv:'lb>c1', col:0xaa88ff,flow:'client-read',delay:17.05,dur:.6, rev:true},
+  {cv:'gw>lb', col:0xaa88ff,flow:'client-read',delay:17.55,dur:.55,rev:true},
+  {cv:'c>gw',  col:0xaa88ff,flow:'client-read',delay:18.0, dur:.55,rev:true},
+  // phase 4 — Full MISS → MySQL → write Aero → return
+  {cv:'c>gw',  col:0x8866cc,flow:'client-read',delay:20.0, dur:.7},
+  {cv:'gw>lb', col:0x8866cc,flow:'client-read',delay:20.6, dur:.6},
+  {cv:'lb>c1', col:0x8866cc,flow:'client-read',delay:21.1, dur:.6},
+  {cv:'c1>aero',col:0xff3300,flow:'client-read',delay:21.6, dur:.55},
+  {cv:'c1>aero',col:0x661100,flow:'client-read',delay:22.05,dur:.45,rev:true},
+  {cv:'c1>es', col:0x2244aa,flow:'client-read',delay:22.4, dur:.8},
+  {cv:'c1>es', col:0x441100,flow:'client-read',delay:23.1, dur:.6, rev:true},
+  {cv:'c1>mysql',col:0xcc55ff,flow:'client-read',delay:23.6, dur:.9},
+  {cv:'c1>mysql',col:0xdd88ff,flow:'client-read',delay:24.4, dur:.8, rev:true},
+  {cv:'c1>aero',col:0xff8800,flow:'client-read',delay:25.1, dur:.55},
+  {cv:'c1>aero',col:0xff9944,flow:'client-read',delay:25.55,dur:.45,rev:true},
+  {cv:'lb>c1', col:0x8866cc,flow:'client-read',delay:25.9, dur:.55,rev:true},
+  {cv:'gw>lb', col:0x8866cc,flow:'client-read',delay:26.35,dur:.5, rev:true},
+  {cv:'c>gw',  col:0x8866cc,flow:'client-read',delay:26.75,dur:.5, rev:true},
+
+  // ── admin-crud (CYCLE=12) — req 1 via aapp1 ──────────────────────────────
+  {cv:'ad>lb', col:0xff6688,flow:'admin-crud',delay:0,   dur:.6},
+  {cv:'lb>aa1',col:0xff6688,flow:'admin-crud',delay:.55, dur:.6},
+  {cv:'aa1>mysql',col:0xcc55ff,flow:'admin-crud',delay:1.1, dur:.8},
+  {cv:'aa1>kfk',  col:0xeecc00,flow:'admin-crud',delay:1.1, dur:.8},
+  {cv:'kfk>kc',   col:0xeecc00,flow:'admin-crud',delay:1.8, dur:.8},
+  {cv:'kc>es',    col:0x77ee33,flow:'admin-crud',delay:2.5, dur:.9},
+  {cv:'aa1>mysql',col:0xdd88ff,flow:'admin-crud',delay:1.8, dur:.65,rev:true},
+  {cv:'lb>aa1',col:0xff88aa,flow:'admin-crud',delay:2.35,dur:.6, rev:true},
+  {cv:'ad>lb', col:0xff88aa,flow:'admin-crud',delay:2.85,dur:.6, rev:true},
+  // req 2 via aapp2
+  {cv:'ad>lb', col:0xff88aa,flow:'admin-crud',delay:6.0, dur:.6},
+  {cv:'lb>aa2',col:0xff88aa,flow:'admin-crud',delay:6.5, dur:.6},
+  {cv:'aa2>mysql',col:0xcc55ff,flow:'admin-crud',delay:7.0, dur:.8},
+  {cv:'aa2>kfk',  col:0xeecc00,flow:'admin-crud',delay:7.0, dur:.8},
+  {cv:'kfk>kc',   col:0xeecc00,flow:'admin-crud',delay:7.7, dur:.8},
+  {cv:'kc>es',    col:0x77ee33,flow:'admin-crud',delay:8.4, dur:.9},
+  {cv:'aa2>mysql',col:0xdd88ff,flow:'admin-crud',delay:7.7, dur:.65,rev:true},
+  {cv:'lb>aa2',col:0xffaacc,flow:'admin-crud',delay:8.25,dur:.6, rev:true},
+  {cv:'ad>lb', col:0xffaacc,flow:'admin-crud',delay:8.75,dur:.6, rev:true},
+
+  // ── bulk-csv (CYCLE=14) — phase 1: upload via aapp1 ──────────────────────
+  {cv:'ad>lb', col:0xffcc44,flow:'bulk-csv',delay:0,   dur:.6},
+  {cv:'lb>aa1',col:0xffcc44,flow:'bulk-csv',delay:.55, dur:.6},
+  {cv:'aa1>s3',col:0xff8822,flow:'bulk-csv',delay:1.1, dur:1.0},
+  {cv:'aa1>s3',col:0xffaa55,flow:'bulk-csv',delay:2.0, dur:.75,rev:true},
+  {cv:'lb>aa1',col:0xffdd88,flow:'bulk-csv',delay:2.65,dur:.6, rev:true},
+  {cv:'ad>lb', col:0xffdd88,flow:'bulk-csv',delay:3.15,dur:.6, rev:true},
+  // phase 2: async bulk processor — batch 1
+  {cv:'bk>s3',  col:0xffdd66,flow:'bulk-csv',delay:5.0, dur:.9},
+  {cv:'bk>mysql',col:0xffcc55,flow:'bulk-csv',delay:5.8, dur:.8},
+  {cv:'bk>kfk', col:0xeecc00,flow:'bulk-csv',delay:6.5, dur:.8},
+  {cv:'kfk>kc', col:0xeecc00,flow:'bulk-csv',delay:7.2, dur:.8},
+  {cv:'kc>es',  col:0x77ee33,flow:'bulk-csv',delay:7.9, dur:.9},
+  // batch 2
+  {cv:'bk>s3',  col:0xffdd66,flow:'bulk-csv',delay:9.5, dur:.9},
+  {cv:'bk>mysql',col:0xffcc55,flow:'bulk-csv',delay:10.2,dur:.8},
+  {cv:'bk>kfk', col:0xeecc00,flow:'bulk-csv',delay:10.9,dur:.8},
+  {cv:'kfk>kc', col:0xeecc00,flow:'bulk-csv',delay:11.6,dur:.8},
+  {cv:'kc>es',  col:0x77ee33,flow:'bulk-csv',delay:12.3,dur:.9},
+
+  // ── image-upload (CYCLE=10) — image 1 via aapp1 ──────────────────────────
+  {cv:'ad>lb', col:0xff9944,flow:'image-upload',delay:0,   dur:.6},
+  {cv:'lb>aa1',col:0xff9944,flow:'image-upload',delay:.55, dur:.6},
+  {cv:'aa1>s3',    col:0xff8822,flow:'image-upload',delay:1.1, dur:.85},
+  {cv:'aa1>mysql', col:0xcc55ff,flow:'image-upload',delay:1.1, dur:.75},
+  {cv:'aa1>kfk',   col:0xeecc00,flow:'image-upload',delay:1.8, dur:.8},
+  {cv:'kfk>kc',    col:0xeecc00,flow:'image-upload',delay:2.5, dur:.8},
+  {cv:'kc>es',     col:0x77ee33,flow:'image-upload',delay:3.2, dur:.9},
+  {cv:'aa1>s3',    col:0xffaa66,flow:'image-upload',delay:1.85,dur:.65,rev:true},
+  {cv:'lb>aa1',col:0xffbb77,flow:'image-upload',delay:2.4, dur:.55,rev:true},
+  {cv:'ad>lb', col:0xffbb77,flow:'image-upload',delay:2.85,dur:.55,rev:true},
+  // image 2 via aapp2
+  {cv:'ad>lb', col:0xffbb66,flow:'image-upload',delay:5.0, dur:.6},
+  {cv:'lb>aa2',col:0xffbb66,flow:'image-upload',delay:5.5, dur:.6},
+  {cv:'aa2>s3',    col:0xff8822,flow:'image-upload',delay:6.0, dur:.85},
+  {cv:'aa2>mysql', col:0xcc55ff,flow:'image-upload',delay:6.0, dur:.75},
+  {cv:'aa2>kfk',   col:0xeecc00,flow:'image-upload',delay:6.7, dur:.8},
+  {cv:'kfk>kc',    col:0xeecc00,flow:'image-upload',delay:7.4, dur:.8},
+  {cv:'kc>es',     col:0x77ee33,flow:'image-upload',delay:8.1, dur:.9},
+  {cv:'aa2>s3',    col:0xffaa66,flow:'image-upload',delay:6.75,dur:.65,rev:true},
+  {cv:'lb>aa2',col:0xffbb77,flow:'image-upload',delay:7.3, dur:.55,rev:true},
+  {cv:'ad>lb', col:0xffbb77,flow:'image-upload',delay:7.75,dur:.55,rev:true},
+];
+
+const TS=.055,TN=4;
+const packets=[];
+for(const pd of PD){
+  const h=new THREE.Mesh(new THREE.SphereGeometry(.13,10,8),new THREE.MeshBasicMaterial({color:pd.col}));
+  h.visible=false; scene.add(h);
+  const tr=[];
+  for(let i=1;i<=TN;i++){
+    const s=new THREE.Mesh(new THREE.SphereGeometry(.13*(1-i*.18),10,8),
+      new THREE.MeshBasicMaterial({color:pd.col,transparent:true,opacity:1-i*.2}));
+    s.visible=false; scene.add(s); tr.push(s);
+  }
+  packets.push({...pd,h,tr});
+}
+
+// ── Flow state ────────────────────────────────────────────────────────────────
+let activeFlow='client-read', cycleT=0;
+
+function triggerTransitions(prev,next){
+  for(const id of Object.keys(NODES)){
+    const was=FN[prev].has(id),now=FN[next].has(id),d=dustSys[id];
+    if(was&&!now){d.phase='dissolve';d.t=0;}
+    else if(!was&&now){d.phase='form';d.t=0;}
+  }
+  for(const cl of connLines){
+    const was=cl.flows.includes(prev),will=cl.flows.includes(next);
+    if(was&&!will){cl.phase='dissolve';cl.t=0;}
+    else if(!was&&will){cl.phase='form';cl.t=0;}
+  }
+}
+
+function setFlow(id){
+  if(id===activeFlow)return;
+  triggerTransitions(activeFlow,id);
+  activeFlow=id; cycleT=0;
+  document.querySelectorAll('.flow-btn').forEach(el=>el.classList.toggle('active',el.dataset.flow===id));
+}
+document.querySelectorAll('.flow-btn').forEach(btn=>btn.addEventListener('click',()=>setFlow(btn.dataset.flow)));
+
+// Initial formation for client-read
+setTimeout(()=>{
+  [...FN['client-read']].forEach((id,i)=>setTimeout(()=>{dustSys[id].phase='form';dustSys[id].t=0;},i*100));
+  connLines.forEach(cl=>{if(cl.flows.includes('client-read')){cl.phase='form';cl.t=0;}});
+},250);
+
+// ── Animate ───────────────────────────────────────────────────────────────────
+const clock=new Timer();
+const tv=new THREE.Vector3();
+
+function animate(){
+  requestAnimationFrame(animate);
+  clock.update();
+  const dt=Math.min(clock.getDelta(),.05);
+  cycleT=(cycleT+dt)%FC[activeFlow];
+  controls.update();
+
+  // Dust
+  for(const[id,d]of Object.entries(dustSys)){
+    const nd=NODES[id],m=nodeObjs[id],on=FN[activeFlow].has(id);
+    const pos=d.geo.attributes.position.array;
+    if(d.phase==='idle'){
+      m.material.opacity=on?1:0; nodeLights[id].intensity=on?1.2:0; d.mat.opacity=0; continue;
+    }
+    d.t=Math.min(d.t+dt,DUST_DUR);
+    const t=d.t/DUST_DUR;
+    if(d.phase==='dissolve'){
+      m.material.opacity=1-t; nodeLights[id].intensity=(1-t)*1.2;
+      d.mat.opacity=Math.sin(t*Math.PI)*.9;
+      const sp=t*t*3;
+      for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0]+d.dirs[i].x*sp;pos[i*3+1]=nd.p[1]+d.dirs[i].y*sp;pos[i*3+2]=nd.p[2]+d.dirs[i].z*sp;}
+      if(d.t>=DUST_DUR){d.phase='idle';m.material.opacity=0;nodeLights[id].intensity=0;d.mat.opacity=0;}
+    }else{
+      m.material.opacity=t>.45?(t-.45)/.55:0; nodeLights[id].intensity=m.material.opacity*1.2;
+      d.mat.opacity=(1-t)*.9;
+      const sp=(1-t)*(1-t)*3;
+      for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0]+d.dirs[i].x*sp;pos[i*3+1]=nd.p[1]+d.dirs[i].y*sp;pos[i*3+2]=nd.p[2]+d.dirs[i].z*sp;}
+      if(d.t>=DUST_DUR){d.phase='idle';m.material.opacity=1;nodeLights[id].intensity=1.2;d.mat.opacity=0;}
+    }
+    d.geo.attributes.position.needsUpdate=true;
+  }
+
+  // Lines
+  for(const cl of connLines){
+    const active=cl.flows.includes(activeFlow);
+    const maxOp=cl.obs?.18:.55;
+    if(cl.phase==='idle'){cl.line.material.opacity=active?maxOp:0;continue;}
+    cl.t=Math.min(cl.t+dt,DUST_DUR);
+    const t=cl.t/DUST_DUR;
+    if(cl.phase==='dissolve'){
+      cl.line.material.opacity=(1-t)*maxOp;
+      if(cl.t>=DUST_DUR){cl.phase='idle';cl.line.material.opacity=0;}
+    }else{
+      cl.line.material.opacity=t*maxOp;
+      if(cl.t>=DUST_DUR){cl.phase='idle';cl.line.material.opacity=maxOp;}
+    }
+  }
+
+  // Packets
+  const CYCLE=FC[activeFlow];
+  for(const pk of packets){
+    if(pk.flow!==activeFlow){pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);continue;}
+    const local=((cycleT-pk.delay)%CYCLE+CYCLE)%CYCLE;
+    if(local<pk.dur){
+      const t=local/pk.dur,crv=CV[pk.cv];
+      if(!crv){pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);continue;}
+      const tPos=pk.rev?(1-t):t;
+      crv.getPoint(tPos,pk.h.position); pk.h.visible=true;
+      pk.tr.forEach((s,i)=>{
+        const tt=pk.rev?Math.min(1,tPos+(i+1)*TS):Math.max(0,tPos-(i+1)*TS);
+        crv.getPoint(tt,s.position); s.visible=true;
+      });
+    }else{pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);}
+  }
+
+  // Labels
+  const W2=cW()/2,H2=cH()/2;
+  for(const[id,m]of Object.entries(nodeObjs)){
+    if(m.material.opacity<.05){labelDivs[id].style.display='none';continue;}
+    tv.copy(m.position); tv.project(camera);
+    const d=labelDivs[id];
+    d.style.left=(tv.x*W2+W2)+'px'; d.style.top=(-(tv.y*H2)+H2+18)+'px';
+    d.style.display=tv.z<1?'block':'none'; d.style.opacity=m.material.opacity;
+  }
+
+  composer.render();
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  const W=cW(),H=cH();
+  camera.aspect=W/H; camera.updateProjectionMatrix();
+  renderer.setSize(W,H); composer.setSize(W,H); bloom.resolution.set(W,H);
+});
+</script>
+</body>
+</html>

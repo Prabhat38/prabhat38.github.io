@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMS Parsing Service — Architecture</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#02020f;overflow:hidden;font-family:'Segoe UI',sans-serif;}
+  #flow-menu{position:fixed;left:0;top:0;bottom:0;width:220px;background:rgba(2,4,20,.92);border-right:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;padding:24px 0 16px;z-index:100;backdrop-filter:blur(8px);}
+  .menu-hdr{color:rgba(255,255,255,.38);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:0 18px 18px;}
+  .flow-btn{display:flex;align-items:flex-start;gap:10px;padding:12px 18px;cursor:pointer;border-left:3px solid transparent;transition:background .2s,border-color .2s;}
+  .flow-btn:hover{background:rgba(255,255,255,.05);}
+  .flow-btn.active{background:rgba(255,255,255,.07);border-left-color:currentColor;}
+  .flow-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+  .flow-name{color:#eee;font-size:13px;font-weight:600;line-height:1.3;}
+  .flow-desc{color:rgba(255,255,255,.38);font-size:10.5px;margin-top:2px;line-height:1.4;}
+  #canvas-wrap{position:fixed;left:220px;top:0;width:calc(100% - 220px);height:100%;}
+  #canvas-wrap canvas{width:100%!important;height:100%!important;display:block;}
+  #proj-title{position:fixed;top:18px;left:240px;z-index:50;color:rgba(255,255,255,.7);font-size:13px;letter-spacing:.06em;pointer-events:none;}
+  #proj-title span{color:rgba(255,255,255,.28);margin-right:8px;}
+  .lbl{position:absolute;pointer-events:none;transform:translate(-50%,0);text-align:center;background:rgba(2,2,16,.75);padding:3px 8px;border-radius:4px;line-height:1.35;}
+  .lbl-main{color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;}
+  .lbl-sub{color:rgba(255,255,255,.48);font-size:9px;}
+</style>
+</head>
+<body>
+<div id="flow-menu">
+  <div class="menu-hdr">Request Flows</div>
+  <div class="flow-btn active" data-flow="sms-ingest" style="color:#44aaff">
+    <div class="flow-dot" style="background:#44aaff"></div>
+    <div><div class="flow-name">SMS Ingest</div><div class="flow-desc">Classify · NER extraction · Reminder pipeline</div></div>
+  </div>
+  <div class="flow-btn" data-flow="retry-model" style="color:#ff4444">
+    <div class="flow-dot" style="background:#ff4444"></div>
+    <div><div class="flow-name">Retry & Model</div><div class="flow-desc">DLQ recovery · Config-driven hot-swap</div></div>
+  </div>
+</div>
+<div id="proj-title"><span>PROJECT 4</span>Real-time SMS Parsing Service</div>
+<div id="canvas-wrap">
+  <div id="lc" style="position:absolute;inset:0;pointer-events:none;z-index:10;overflow:hidden;"></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { Timer } from 'three/addons/misc/Timer.js';
+import {OrbitControls}   from 'three/addons/controls/OrbitControls.js';
+import {EffectComposer}  from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass}      from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const MENU=220,cW=()=>window.innerWidth-MENU,cH=()=>window.innerHeight;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x02020f);
+scene.fog=new THREE.FogExp2(0x02020f,.010);
+
+const camera=new THREE.PerspectiveCamera(60,cW()/cH(),.1,300);
+camera.position.set(2.0,0.0,26);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(cW(),cH());
+document.getElementById('canvas-wrap').insertBefore(renderer.domElement,document.getElementById('lc'));
+
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=.08;
+controls.autoRotate=true;controls.autoRotateSpeed=.18;
+controls.target.set(2.0,0.0,0);
+
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(cW(),cH()),.85,.45,.12);
+composer.addPass(bloom);
+
+scene.add(new THREE.AmbientLight(0xffffff,.35));
+const dirL=new THREE.DirectionalLight(0xffffff,.6);
+dirL.position.set(5,12,8);scene.add(dirL);
+
+// ── Nodes ─────────────────────────────────────────────────────────────────────
+// IN flow: wave pattern android(-13,y=1) → apigw(y=-2) → lb(y=-5.5) → java_app(y=4) →
+//          kafka_in(y=-3) → consumers(y=4) → python(y=-1.5) → mysql(y=6) + reminder(y=1)
+// DLQ flow: reuses consumers/python/mysql/reminder; adds kafka_ret(y=-11) + s3(y=-6)
+const NODES={
+  android:   {p:[-13.0, 1.0, 1.5], c:0x44aaff, label:'ANDROID CLIENT',   sub:'Reads On-Device SMS · Sends to Ingest API',    type:'client'   },
+  apigw:     {p:[ -8.0,-2.0, 1.2], c:0x00c0ff, label:'API GATEWAY',       sub:'Auth · Rate Limit · Routing',                  type:'gateway'  },
+  lb:        {p:[ -3.0,-5.5, 1.0], c:0x00ddcc, label:'LOAD BALANCER',     sub:'Distributes Ingest Traffic',                   type:'lb'       },
+  java_app:  {p:[  1.0, 4.0, 0.8], c:0x22ee77, label:'JAVA APP SERVERS',  sub:'Async Ingest API · Kafka Producer',            type:'server'   },
+  kafka_in:  {p:[  6.0,-3.0, 0.3], c:0xff9933, label:'KAFKA PRIMARY',     sub:'Core Pipeline · 10K msg/s · Autoscale on Lag', type:'cache'    },
+  consumers: {p:[ 10.0, 4.0, 0.0], c:0x22ee77, label:'KAFKA CONSUMERS',  sub:'Read Primary Topic · Call Python Inference',   type:'server'   },
+  python:    {p:[ 14.0,-1.5,-0.5], c:0xee55aa, label:'PYTHON INFERENCE',  sub:'Stage 1: Classify · Stage 2: NER Extraction',  type:'processor'},
+  mysql:     {p:[ 18.0, 6.0,-0.8], c:0x3366ff, label:'MYSQL',             sub:'Raw SMS + Extracted Entities per Category',    type:'cache'    },
+  s3:        {p:[ 18.0,-6.0,-0.8], c:0xff8833, label:'AWS S3',            sub:'Versioned Model Bundles · Hot-Swap Source',    type:'obs'      },
+  kafka_ret: {p:[  6.0,-11.0, 0.5],c:0xff4444, label:'KAFKA RETRY / DLQ',sub:'Exponential Backoff · Dead Letter Queue',      type:'es'       },
+  reminder:  {p:[ 19.0, 1.0,-1.0], c:0xaa44ff, label:'REMINDER SERVICE', sub:'Push · SMS · Email Notifications',            type:'obs'      },
+};
+
+function stdMat(c){return new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.22,roughness:.55,metalness:.35,transparent:true,opacity:0});}
+function nodeGeo(t){
+  switch(t){
+    case'client':    return new THREE.SphereGeometry(.52,32,24);
+    case'gateway':   return new THREE.OctahedronGeometry(.52,0);
+    case'lb':        return new THREE.CylinderGeometry(.38,.48,.72,6);
+    case'server':    return new THREE.BoxGeometry(.82,.82,.82);
+    case'processor': return new THREE.BoxGeometry(.78,.62,.78);
+    case'cache':     return new THREE.CylinderGeometry(.46,.46,.88,16);
+    case'es':        return new THREE.TorusGeometry(.42,.18,12,24);
+    case'obs':       return new THREE.IcosahedronGeometry(.5,0);
+    default:         return new THREE.SphereGeometry(.48,16,12);
+  }
+}
+
+const nodeObjs={},nodeLights={},labelDivs={};
+const lc=document.getElementById('lc');
+for(const[id,nd]of Object.entries(NODES)){
+  const m=new THREE.Mesh(nodeGeo(nd.type),stdMat(nd.c));
+  m.position.set(...nd.p);scene.add(m);nodeObjs[id]=m;
+  const pl=new THREE.PointLight(nd.c,0,7.0);
+  pl.position.set(...nd.p);scene.add(pl);nodeLights[id]=pl;
+  const d=document.createElement('div');
+  d.className='lbl';d.style.display='none';
+  d.innerHTML=`<div class="lbl-main">${nd.label}</div><div class="lbl-sub">${nd.sub}</div>`;
+  lc.appendChild(d);labelDivs[id]=d;
+}
+
+// ── Dust ──────────────────────────────────────────────────────────────────────
+const DUST_N=32,DUST_DUR=.7,dustSys={};
+for(const[id,nd]of Object.entries(NODES)){
+  const pos=new Float32Array(DUST_N*3);
+  for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0];pos[i*3+1]=nd.p[1];pos[i*3+2]=nd.p[2];}
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:nd.c,size:.09,transparent:true,opacity:0,sizeAttenuation:true,depthWrite:false});
+  const pts=new THREE.Points(geo,mat);scene.add(pts);
+  const dirs=Array.from({length:DUST_N},()=>new THREE.Vector3(Math.random()-.5,Math.random()-.5,Math.random()-.5).normalize());
+  dustSys[id]={pts,geo,mat,dirs,phase:'idle',t:0};
+}
+
+// ── Connections ───────────────────────────────────────────────────────────────
+const IN='sms-ingest',DLQ='retry-model';
+const CDEFS=[
+  {a:'android',   b:'apigw',     c:0x44aaff, flows:[IN]},
+  {a:'apigw',     b:'lb',        c:0x00c0ff, flows:[IN]},
+  {a:'lb',        b:'java_app',  c:0x00ddcc, flows:[IN]},
+  {a:'java_app',  b:'kafka_in',  c:0x22ee77, flows:[IN]},
+  {a:'kafka_in',  b:'consumers', c:0xff9933, flows:[IN]},
+  {a:'consumers', b:'python',    c:0x22ee77, flows:[IN,DLQ]},
+  {a:'consumers', b:'mysql',     c:0x3366ff, flows:[IN,DLQ]},
+  {a:'consumers', b:'reminder',  c:0xaa44ff, flows:[IN,DLQ]},
+  {a:'consumers', b:'kafka_ret', c:0xff4444, flows:[DLQ]},
+  {a:'kafka_ret', b:'python',    c:0xff6644, flows:[DLQ]},
+  {a:'python',    b:'s3',        c:0xff8833, flows:[DLQ]},
+];
+const connLines=[];
+for(const cd of CDEFS){
+  const pa=new THREE.Vector3(...NODES[cd.a].p),pb=new THREE.Vector3(...NODES[cd.b].p);
+  const mat=new THREE.LineBasicMaterial({color:cd.c,transparent:true,opacity:0});
+  const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([pa,pb]),mat);
+  scene.add(line);
+  connLines.push({line,flows:cd.flows,phase:'idle',t:0});
+}
+
+// ── Curves ────────────────────────────────────────────────────────────────────
+const CV={};
+function mkC(a,b,key,bend=[0,0,0]){
+  const pa=new THREE.Vector3(...NODES[a].p),pb=new THREE.Vector3(...NODES[b].p);
+  CV[key]=new THREE.CatmullRomCurve3([pa,pa.clone().add(pb).multiplyScalar(.5).add(new THREE.Vector3(...bend)),pb]);
+}
+mkC('android',   'apigw',     'a>gw',    [ 0,  -0.5,  .4]);
+mkC('apigw',     'lb',        'gw>lb',   [ 0,  -0.8,  .3]);
+mkC('lb',        'java_app',  'lb>java', [ 0,   3.5,  .5]); // y=-5.5 → y=4, dramatic rise
+mkC('java_app',  'kafka_in',  'java>kin',[ 0,  -2.5,  .3]); // y=4 → y=-3, drop
+mkC('kafka_in',  'consumers', 'kin>con', [ 0,   2.5,  .2]); // y=-3 → y=4, rise
+mkC('consumers', 'python',    'con>py',  [ 0,  -1.5, -.3]); // y=4 → y=-1.5, drop
+mkC('consumers', 'mysql',     'con>sql', [ 0,   1.0, -.2]); // consumers save entities to MySQL
+mkC('consumers', 'reminder',  'con>rem', [ 1.0, 0.0, -.2]); // consumers publish to Reminder
+mkC('consumers', 'kafka_ret', 'con>ret', [ 0,  -4.0,  .3]); // y=4 → y=-11, big drop
+mkC('kafka_ret', 'python',    'ret>py',  [ 2.0, 3.0,  .0]); // y=-11 → y=-1.5, rise
+mkC('python',    's3',        'py>s3',   [ 1.0,-1.5, -.3]); // drop to S3
+
+// ── Flow node sets ────────────────────────────────────────────────────────────
+const FN={
+  [IN]: new Set(['android','apigw','lb','java_app','kafka_in','consumers','python','mysql','reminder']),
+  [DLQ]:new Set(['consumers','python','kafka_ret','mysql','s3','reminder']),
+};
+const FC={[IN]:24,[DLQ]:22};
+
+// Per-flow camera
+// IN:  camera at x=2 centres full pipeline (android x=-13 to reminder x=19)
+// DLQ: camera shifts right to x=12.5, pulls back to z=30 to frame retry/dlq below + s3 right
+const FLOW_CAM={
+  [IN]: {pos:new THREE.Vector3( 2.0, 0.0,34), tgt:new THREE.Vector3( 2.0, 0.0,0)},
+  [DLQ]:{pos:new THREE.Vector3(12.5,-1.0,30), tgt:new THREE.Vector3(12.5,-1.0,0)},
+};
+let camTransition=null;
+
+// ── Packets ───────────────────────────────────────────────────────────────────
+const PD=[
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SMS INGEST (IN)  cycle=24s
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── Phase 1 — Credit Card Bill SMS (0–11s) ────────────────────────────────
+  {cv:'a>gw',    col:0x88ccff, flow:IN, delay:0.0,  dur:.45},
+  {cv:'gw>lb',   col:0x88ccff, flow:IN, delay:0.40, dur:.40},
+  {cv:'lb>java', col:0x88ccff, flow:IN, delay:0.75, dur:.45},
+  {cv:'java>kin',col:0x44ffaa, flow:IN, delay:1.15, dur:.50}, // async Kafka publish
+  {cv:'kin>con', col:0xff9933, flow:IN, delay:1.60, dur:.55}, // consumer reads
+  {cv:'con>py',  col:0xff9933, flow:IN, delay:2.10, dur:.60}, // classify + NER inference call
+  {cv:'con>py',  col:0xaaffcc, flow:IN, delay:2.70, dur:.55, rev:true}, // entities returned to consumers
+  {cv:'con>sql', col:0x5588ff, flow:IN, delay:3.30, dur:.50}, // consumers save to MySQL
+  {cv:'con>rem', col:0xbb66ff, flow:IN, delay:3.30, dur:.55}, // consumers publish to Reminder
+
+  // ── Phase 2 — Electricity Bill SMS (13–23s) ───────────────────────────────
+  {cv:'a>gw',    col:0xffdd66, flow:IN, delay:13.0, dur:.45},
+  {cv:'gw>lb',   col:0xffdd66, flow:IN, delay:13.40,dur:.40},
+  {cv:'lb>java', col:0xffdd66, flow:IN, delay:13.75,dur:.45},
+  {cv:'java>kin',col:0xffaa44, flow:IN, delay:14.15,dur:.50},
+  {cv:'kin>con', col:0xff9933, flow:IN, delay:14.60,dur:.55},
+  {cv:'con>py',  col:0xff9933, flow:IN, delay:15.10,dur:.60},
+  {cv:'con>py',  col:0x88ffcc, flow:IN, delay:15.70,dur:.55, rev:true}, // entities returned
+  {cv:'con>sql', col:0x44aaff, flow:IN, delay:16.30,dur:.50},
+  {cv:'con>rem', col:0xcc55ff, flow:IN, delay:16.30,dur:.55},
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // RETRY & MODEL (DLQ)  cycle=22s
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // ── Phase 1 — Failure → Retry → Success (0–10s) ───────────────────────────
+  {cv:'con>py',  col:0xff6655, flow:DLQ, delay:0.0,  dur:.60}, // inference call (fails)
+  {cv:'con>ret', col:0xff4444, flow:DLQ, delay:0.80, dur:.80}, // publish to retry topic
+  {cv:'ret>py',  col:0xff8833, flow:DLQ, delay:2.00, dur:.70}, // retry consumer re-attempts
+  {cv:'ret>py',  col:0x88ffdd, flow:DLQ, delay:2.70, dur:.55, rev:true}, // entities returned to retry consumer
+  {cv:'con>sql', col:0x44aaff, flow:DLQ, delay:3.30, dur:.50}, // consumers save to MySQL
+  {cv:'con>rem', col:0x9955ff, flow:DLQ, delay:3.30, dur:.55}, // consumers publish to Reminder
+  // Second failure: retries exhausted → DLQ
+  {cv:'con>py',  col:0xff5533, flow:DLQ, delay:5.50, dur:.60},
+  {cv:'con>ret', col:0xff2200, flow:DLQ, delay:6.30, dur:.80}, // DLQ: retries exhausted
+
+  // ── Phase 2 — Model Hot-Swap (12–21s) ─────────────────────────────────────
+  {cv:'py>s3',   col:0xff9933, flow:DLQ, delay:12.0, dur:.65}, // Python polls config/S3
+  {cv:'py>s3',   col:0xffcc77, flow:DLQ, delay:12.60,dur:.75, rev:true}, // bundle download
+  {cv:'py>s3',   col:0xffdd99, flow:DLQ, delay:13.40,dur:.75, rev:true}, // bundle streaming
+  {cv:'py>s3',   col:0xffee44, flow:DLQ, delay:14.20,dur:.75, rev:true}, // model reload complete
+];
+
+const TS=.055,TN=4,packets=[];
+for(const pd of PD){
+  const h=new THREE.Mesh(new THREE.SphereGeometry(.13,10,8),new THREE.MeshBasicMaterial({color:pd.col}));
+  h.visible=false;scene.add(h);
+  const tr=[];
+  for(let i=1;i<=TN;i++){
+    const s=new THREE.Mesh(new THREE.SphereGeometry(.13*(1-i*.18),10,8),
+      new THREE.MeshBasicMaterial({color:pd.col,transparent:true,opacity:1-i*.2}));
+    s.visible=false;scene.add(s);tr.push(s);
+  }
+  packets.push({...pd,h,tr});
+}
+
+// ── Flow state ────────────────────────────────────────────────────────────────
+let activeFlow=IN,cycleT=0;
+
+function triggerTransitions(prev,next){
+  for(const id of Object.keys(NODES)){
+    const was=FN[prev].has(id),now=FN[next].has(id),d=dustSys[id];
+    if(was&&!now){d.phase='dissolve';d.t=0;}
+    else if(!was&&now){d.phase='form';d.t=0;}
+  }
+  for(const cl of connLines){
+    const was=cl.flows.includes(prev),will=cl.flows.includes(next);
+    if(was&&!will){cl.phase='dissolve';cl.t=0;}
+    else if(!was&&will){cl.phase='form';cl.t=0;}
+  }
+}
+function setFlow(id){
+  if(id===activeFlow)return;
+  triggerTransitions(activeFlow,id);
+  activeFlow=id;cycleT=0;
+  document.querySelectorAll('.flow-btn').forEach(el=>el.classList.toggle('active',el.dataset.flow===id));
+  const fc=FLOW_CAM[id];
+  camTransition={fromPos:camera.position.clone(),fromTgt:controls.target.clone(),
+    toPos:fc.pos.clone(),toTgt:fc.tgt.clone(),t:0,dur:1.2};
+}
+document.querySelectorAll('.flow-btn').forEach(btn=>btn.addEventListener('click',()=>setFlow(btn.dataset.flow)));
+
+setTimeout(()=>{
+  [...FN[IN]].forEach((id,i)=>setTimeout(()=>{dustSys[id].phase='form';dustSys[id].t=0;},i*100));
+  connLines.forEach(cl=>{if(cl.flows.includes(IN)){cl.phase='form';cl.t=0;}});
+},250);
+
+// ── Animate — capped to 60fps so autoRotate is frame-rate independent ─────────
+const clock=new Timer(),tv=new THREE.Vector3();
+const TARGET_MS=1000/60;let accumMs=0;
+function animate(){
+  requestAnimationFrame(animate);
+  clock.update();
+  const rawDt=clock.getDelta();
+  accumMs+=rawDt*1000;
+  if(accumMs<TARGET_MS)return;
+  const dt=Math.min(accumMs/1000,.05);
+  accumMs=0;
+  cycleT=(cycleT+dt)%FC[activeFlow];
+  if(camTransition){
+    camTransition.t=Math.min(camTransition.t+dt,camTransition.dur);
+    const tt=camTransition.t/camTransition.dur;
+    const ease=tt<.5?2*tt*tt:-1+(4-2*tt)*tt;
+    camera.position.lerpVectors(camTransition.fromPos,camTransition.toPos,ease);
+    controls.target.lerpVectors(camTransition.fromTgt,camTransition.toTgt,ease);
+    camera.lookAt(controls.target);
+    if(camTransition.t>=camTransition.dur){camTransition=null;}
+  }else{
+    controls.update();
+  }
+
+  for(const[id,d]of Object.entries(dustSys)){
+    const nd=NODES[id],m=nodeObjs[id],on=FN[activeFlow].has(id);
+    const pos=d.geo.attributes.position.array;
+    if(d.phase==='idle'){m.material.opacity=on?1:0;nodeLights[id].intensity=on?1.2:0;d.mat.opacity=0;continue;}
+    d.t=Math.min(d.t+dt,DUST_DUR);
+    const t=d.t/DUST_DUR;
+    if(d.phase==='dissolve'){
+      m.material.opacity=1-t;nodeLights[id].intensity=(1-t)*1.2;
+      d.mat.opacity=Math.sin(t*Math.PI)*.9;
+      const sp=t*t*3;
+      for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0]+d.dirs[i].x*sp;pos[i*3+1]=nd.p[1]+d.dirs[i].y*sp;pos[i*3+2]=nd.p[2]+d.dirs[i].z*sp;}
+      if(d.t>=DUST_DUR){d.phase='idle';m.material.opacity=0;nodeLights[id].intensity=0;d.mat.opacity=0;}
+    }else{
+      m.material.opacity=t>.45?(t-.45)/.55:0;nodeLights[id].intensity=m.material.opacity*1.2;
+      d.mat.opacity=(1-t)*.9;
+      const sp=(1-t)*(1-t)*3;
+      for(let i=0;i<DUST_N;i++){pos[i*3]=nd.p[0]+d.dirs[i].x*sp;pos[i*3+1]=nd.p[1]+d.dirs[i].y*sp;pos[i*3+2]=nd.p[2]+d.dirs[i].z*sp;}
+      if(d.t>=DUST_DUR){d.phase='idle';m.material.opacity=1;nodeLights[id].intensity=1.2;d.mat.opacity=0;}
+    }
+    d.geo.attributes.position.needsUpdate=true;
+  }
+
+  for(const cl of connLines){
+    const active=cl.flows.includes(activeFlow),maxOp=.55;
+    if(cl.phase==='idle'){cl.line.material.opacity=active?maxOp:0;continue;}
+    cl.t=Math.min(cl.t+dt,DUST_DUR);
+    const t=cl.t/DUST_DUR;
+    if(cl.phase==='dissolve'){
+      cl.line.material.opacity=(1-t)*maxOp;
+      if(cl.t>=DUST_DUR){cl.phase='idle';cl.line.material.opacity=0;}
+    }else{
+      cl.line.material.opacity=t*maxOp;
+      if(cl.t>=DUST_DUR){cl.phase='idle';cl.line.material.opacity=maxOp;}
+    }
+  }
+
+  const CYCLE=FC[activeFlow];
+  for(const pk of packets){
+    if(pk.flow!==activeFlow){pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);continue;}
+    const local=((cycleT-pk.delay)%CYCLE+CYCLE)%CYCLE;
+    if(local<pk.dur){
+      const t=local/pk.dur,crv=CV[pk.cv];
+      if(!crv){pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);continue;}
+      const tPos=pk.rev?(1-t):t;
+      crv.getPoint(tPos,pk.h.position);pk.h.visible=true;
+      pk.tr.forEach((s,i)=>{
+        const tt=pk.rev?Math.min(1,tPos+(i+1)*TS):Math.max(0,tPos-(i+1)*TS);
+        crv.getPoint(tt,s.position);s.visible=true;
+      });
+    }else{pk.h.visible=false;pk.tr.forEach(s=>s.visible=false);}
+  }
+
+  const W2=cW()/2,H2=cH()/2;
+  for(const[id,m]of Object.entries(nodeObjs)){
+    if(m.material.opacity<.05){labelDivs[id].style.display='none';continue;}
+    tv.copy(m.position);tv.project(camera);
+    const d=labelDivs[id];
+    d.style.left=(tv.x*W2+W2)+'px';d.style.top=(-(tv.y*H2)+H2+18)+'px';
+    d.style.display=tv.z<1?'block':'none';d.style.opacity=m.material.opacity;
+  }
+  composer.render();
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  const W=cW(),H=cH();
+  camera.aspect=W/H;camera.updateProjectionMatrix();
+  renderer.setSize(W,H);composer.setSize(W,H);bloom.resolution.set(W,H);
+});
+</script>
+</body>
+</html>
