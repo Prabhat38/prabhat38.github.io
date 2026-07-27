@@ -38,7 +38,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
       { label: 'Revenue Impact', value: '₹100M', suffix: '+' },
       { label: 'P99 Latency', value: '<10', suffix: 'ms' },
     ],
-    tags: ['Kafka', 'Python', 'Java', 'Spring Boot 3', 'Aerospike', 'Elasticsearch', 'Resilience4j'],
+    tags: ['Kafka', 'Python', 'Java', 'Node.js', 'Spring Boot 3', 'Aerospike', 'Elasticsearch', 'Resilience4j'],
   },
   {
     id: 'sse-paytm',
@@ -57,7 +57,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
       { label: 'Conversion Gain', value: '20', suffix: '%' },
       { label: 'Merchants', value: '1,300', suffix: '+' },
     ],
-    tags: ['Kafka', 'Cassandra', 'Java', 'Spring Boot', 'Resilience4j', 'Aerospike', 'MySQL'],
+    tags: ['Kafka', 'Cassandra', 'Java', 'Node.js', 'Spring Boot', 'Resilience4j', 'Aerospike', 'MySQL'],
   },
   {
     id: 'swe-paytm',
@@ -75,7 +75,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
       { label: 'Latency Reduction', value: '25', suffix: '%' },
       { label: 'Reliability Gain', value: '50', suffix: '%' },
     ],
-    tags: ['Java', 'Spring Boot', 'Elasticsearch', 'Prometheus', 'Grafana', 'MySQL'],
+    tags: ['Java', 'Node.js', 'Spring Boot', 'Elasticsearch', 'Prometheus', 'Grafana', 'MySQL'],
   },
 ];
 
@@ -142,7 +142,7 @@ export const PROJECTS: Project[] = [
       { label: 'P99 Latency', value: '6–25', suffix: 'ms' },
       { label: 'Daily Revenue', value: '₹15M', suffix: '' },
     ],
-    techStack: ['Java', 'Spring Boot', 'MySQL', 'Elasticsearch', 'Aerospike', 'Kafka', 'AWS S3'],
+    techStack: ['Java', 'Node.js', 'Spring Boot', 'MySQL', 'Elasticsearch', 'Aerospike', 'Kafka', 'AWS S3'],
     category: 'backend',
     size: 'large',
     accentColor: 'cyan',
@@ -389,7 +389,7 @@ export const PROJECTS: Project[] = [
       { label: 'Active Rules', value: '100', suffix: '+' },
       { label: 'Touchpoints', value: '4', suffix: '/journey' },
     ],
-    techStack: ['Java', 'Spring Boot', 'Elasticsearch (Percolator)', 'Kafka'],
+    techStack: ['Java', 'Node.js', 'Spring Boot', 'Elasticsearch (Percolator)', 'Kafka'],
     category: 'notification',
     size: 'medium',
     accentColor: 'purple',
@@ -437,7 +437,7 @@ export const PROJECTS: Project[] = [
       { label: 'Notification Types', value: '4', suffix: '' },
       { label: 'Delivery', value: 'Near', suffix: ' real-time' },
     ],
-    techStack: ['Java', 'Spring Boot', 'Kafka', 'MySQL'],
+    techStack: ['Java', 'Node.js', 'Spring Boot', 'Kafka', 'MySQL'],
     category: 'notification',
     size: 'medium',
     accentColor: 'cyan',
