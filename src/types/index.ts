@@ -4,11 +4,6 @@ export interface Metric {
   suffix?: string;
 }
 
-export interface TechTag {
-  name: string;
-  color?: 'cyan' | 'purple' | 'default';
-}
-
 export interface ExperienceEntry {
   id: string;
   type?: 'work' | 'break' | 'education';

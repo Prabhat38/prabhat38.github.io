@@ -19,6 +19,7 @@ export function Experience() {
   useGSAP(
     () => {
       if (!lineRef.current) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       gsap.from(lineRef.current, {
         scaleY: 0,
         transformOrigin: 'top center',
@@ -68,6 +69,8 @@ export function Experience() {
               : 'border-[#7B61FF] bg-[#050A0F]';
 
             const glowColor = isEducation ? 'purple' : isBreak ? undefined : entry.current ? 'cyan' : 'purple';
+            const isCompact = isEducation || isBreak;
+            const hasBody = entry.bullets.length > 0 || (!isCompact && entry.metrics.length > 0);
 
             return (
               <motion.div
@@ -82,11 +85,15 @@ export function Experience() {
                 <div className={`absolute left-[12px] md:left-[26px] top-6 w-4 h-4 rounded-full border-2 ${dotClass}`} />
 
                 <GlassCard
-                  className={`p-6 md:p-7 ${isBreak ? 'opacity-70' : ''}`}
+                  className={`${isCompact ? 'p-5 md:p-6' : 'p-6 md:p-7'} ${isBreak ? 'opacity-70' : ''}`}
                   glowColor={glowColor}
                 >
                   {/* Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+                  <div
+                    className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 ${
+                      hasBody ? 'mb-4' : ''
+                    }`}
+                  >
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-white font-bold text-lg">{entry.role}</h3>
@@ -102,11 +109,6 @@ export function Experience() {
                         {isEducation && (
                           <span className="px-2 py-0.5 rounded-full bg-[rgba(123,97,255,0.08)] border border-[rgba(123,97,255,0.2)] text-[#7B61FF] text-xs font-mono">
                             Education
-                          </span>
-                        )}
-                        {isBreak && (
-                          <span className="px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/10 text-[#8892A4] text-xs font-mono">
-                            Career Break
                           </span>
                         )}
                       </div>
@@ -147,7 +149,7 @@ export function Experience() {
 
                   {/* Bullets */}
                   {entry.bullets.length > 0 && (
-                    <ul className="space-y-2 mb-5">
+                    <ul className={`space-y-2 ${isCompact ? '' : 'mb-5'}`}>
                       {entry.bullets.map((bullet, bi) => (
                         <li key={bi} className="flex gap-3 text-sm text-[#8892A4] leading-relaxed">
                           <span className={`mt-1 shrink-0 ${isEducation ? 'text-[#7B61FF]' : 'text-[#00D9FF]'}`}>▸</span>

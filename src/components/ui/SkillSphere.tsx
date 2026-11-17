@@ -72,6 +72,8 @@ export function SkillSphere() {
   const unitPositions = useMemo(() => fibSphere(SKILLS_FLAT.length), []);
 
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
     const state = animRef.current;
     let last = performance.now();
     const loop = (now: number) => {
