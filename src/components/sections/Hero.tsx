@@ -7,6 +7,12 @@ import { CanvasWrapper } from '@/components/canvas/CanvasWrapper';
 
 const NAME = 'Prabhat Kumar';
 
+// Letter index is tracked across words so the stagger stays continuous
+const NAME_WORDS = NAME.split(' ').map((word, i, all) => ({
+  word,
+  start: all.slice(0, i).reduce((n, w) => n + w.length, 0),
+}));
+
 const containerVariants = {
   hidden: {},
   visible: {
@@ -18,12 +24,12 @@ const EASE = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 const letterVariants = {
   hidden: { opacity: 0, y: 60, rotateX: -40 },
-  visible: {
+  visible: (i: number) => ({
     opacity: 1,
     y: 0,
     rotateX: 0,
-    transition: { duration: 0.55, ease: EASE },
-  },
+    transition: { duration: 0.55, delay: 0.3 + i * 0.04, ease: EASE },
+  }),
 };
 
 const fadeUp = {
@@ -41,6 +47,10 @@ const STATS = [
   { value: '€1M+', unit: 'in annual fees' },
   { value: '6–25ms', unit: 'P99 latency' },
 ];
+
+const LONGEST_STAT = STATS.reduce((a, b) =>
+  `${a.value} ${a.unit}`.length >= `${b.value} ${b.unit}`.length ? a : b
+);
 
 export function Hero() {
   const [statIdx, setStatIdx] = useState(0);
@@ -98,15 +108,23 @@ export function Hero() {
           animate="visible"
           aria-label={NAME}
         >
-          {NAME.split('').map((char, i) => (
-            <motion.span
-              key={i}
-              variants={letterVariants}
-              className="inline-block"
-              style={{ display: char === ' ' ? 'inline' : 'inline-block' }}
-            >
-              {char === ' ' ? ' ' : char}
-            </motion.span>
+          {NAME_WORDS.map(({ word, start }, wi) => (
+            <span key={word}>
+              {wi > 0 && ' '}
+              {/* Letters are inline-block; without nowrap a name can break mid-word */}
+              <span className="inline-block whitespace-nowrap">
+                {word.split('').map((char, ci) => (
+                  <motion.span
+                    key={ci}
+                    custom={start + ci}
+                    variants={letterVariants}
+                    className="inline-block"
+                  >
+                    {char}
+                  </motion.span>
+                ))}
+              </span>
+            </span>
           ))}
         </motion.h1>
 
@@ -130,7 +148,14 @@ export function Hero() {
           className="mt-3 flex items-center justify-center gap-x-2 flex-wrap"
         >
           <span className="text-sm md:text-base text-[#8892A4]/70">Building distributed systems —</span>
-          <div className="relative inline-flex items-center h-6 min-w-[180px] justify-center">
+          <div className="relative inline-flex items-center h-6 justify-center">
+            {/* Reserves the width of the longest stat so rotating values never overflow */}
+            <span
+              aria-hidden
+              className="invisible font-mono font-bold text-sm md:text-base whitespace-nowrap"
+            >
+              {LONGEST_STAT.value}&nbsp;{LONGEST_STAT.unit}
+            </span>
             <AnimatePresence mode="wait">
               <motion.span
                 key={statIdx}
