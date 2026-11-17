@@ -216,7 +216,7 @@ export const PROJECTS: Project[] = [
         heading: 'Observability & Incident Response',
         points: [
           'Diagnosed and resolved a production JVM heap crisis: horizontal scale-out for immediate stabilisation, root-caused via GC log analysis, permanently fixed through heap parameter tuning',
-          'Investigated an Elasticsearch latency anomaly (P99 spiking from 25ms to 10–50s): correlated Grafana dashboards and debug logs to isolate the cause to the Elasticsearch layer, ruled out the network, and coordinated a node restart',
+          'Investigated an Elasticsearch latency anomaly (P99 spiking from 25ms to 10–50s) from the application side: correlated Grafana dashboards and debug logs, ruled out application and network causes, then escalated to DevOps with those findings — they root-caused it at the cluster level and resolved it with a rolling node-by-node restart',
           'Configured the observability stack: Prometheus, Grafana, Datadog, PagerDuty, CloudWatch, and Slack alert channels',
         ],
       },
