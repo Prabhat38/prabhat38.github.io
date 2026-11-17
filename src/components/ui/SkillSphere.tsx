@@ -12,16 +12,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   ai:           '#ff44bb',
 };
 
-export const CATEGORY_META = [
-  { id: 'backend',       label: 'Backend',              color: '#3d7fff' },
-  { id: 'messaging',     label: 'Messaging',            color: '#eecc00' },
-  { id: 'databases',     label: 'Databases & Storage',  color: '#9933ff' },
-  { id: 'testing',       label: 'Testing & Quality',    color: '#22cc88' },
-  { id: 'observability', label: 'Observability',        color: '#ff6611' },
-  { id: 'cloud',         label: 'Cloud & DevOps',       color: '#55eebb' },
-  { id: 'ai',            label: 'ML in Production',     color: '#ff44bb' },
-];
-
 const SKILLS_FLAT = [
   { name: 'Java',           category: 'backend'       },
   { name: 'Node.js',        category: 'backend'       },
@@ -62,7 +52,7 @@ function fibSphere(n: number): [number, number, number][] {
   return pts;
 }
 
-export function SkillSphere() {
+export function SkillSphere({ asBackground = false }: { asBackground?: boolean } = {}) {
   const animRef = useRef({ ry: 0, rx: 0.18, paused: false });
   const frameRef = useRef(0);
   const tickRef = useRef(0);
@@ -94,7 +84,8 @@ export function SkillSphere() {
 
   void tick; // consumed to trigger re-render
 
-  const R = 180;
+  // Spread wider as a backdrop so it reaches behind the full card grid
+  const R = asBackground ? 330 : 180;
   const { ry, rx } = animRef.current;
   const cosY = Math.cos(ry), sinY = Math.sin(ry);
   const cosX = Math.cos(rx), sinX = Math.sin(rx);
@@ -117,7 +108,9 @@ export function SkillSphere() {
       sx: x1 * R,
       sy: -y2 * R,
       z2,
-      opacity: isHov ? 1 : Math.max(0.06, depth * 0.9 + 0.06),
+      opacity: asBackground
+        ? Math.max(0.04, depth * 0.34 + 0.04)
+        : isHov ? 1 : Math.max(0.06, depth * 0.9 + 0.06),
       scale:   isHov ? 1.3 : 0.72 + depth * 0.45,
       color,
       isHov,
@@ -126,8 +119,10 @@ export function SkillSphere() {
 
   return (
     <div
-      className="relative w-full flex items-center justify-center select-none"
-      style={{ height: 420 }}
+      className={`relative w-full flex items-center justify-center select-none ${
+        asBackground ? 'h-full pointer-events-none' : ''
+      }`}
+      style={asBackground ? undefined : { height: 420 }}
     >
       {/* Central glow */}
       <div
@@ -164,11 +159,11 @@ export function SkillSphere() {
             transition: 'opacity 0.15s, transform 0.15s, font-weight 0.1s',
             zIndex: Math.round(item.z2 * 10) + 10,
           }}
-          onMouseEnter={() => {
+          onMouseEnter={asBackground ? undefined : () => {
             animRef.current.paused = true;
             setHovered(item.name);
           }}
-          onMouseLeave={() => {
+          onMouseLeave={asBackground ? undefined : () => {
             animRef.current.paused = false;
             setHovered(null);
           }}
