@@ -74,15 +74,20 @@ export function Hero() {
 
       {/* Content */}
       <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
-        {/* Eyebrow */}
+        {/* Eyebrow: availability, then location as a separate statement */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,217,255,0.25)] bg-[rgba(0,217,255,0.06)] text-[#00D9FF] text-xs font-mono font-medium tracking-wider"
+          className="mb-6 flex flex-col items-center gap-2"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00D9FF] animate-pulse" />
-          Open to Werkstudent roles · Remote or Erfurt
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,217,255,0.25)] bg-[rgba(0,217,255,0.06)] text-[#00D9FF] text-xs font-mono font-medium tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00D9FF] animate-pulse" />
+            Open to Werkstudent roles
+          </span>
+          <span className="text-[#8892A4] text-xs font-mono tracking-wide">
+            Currently located in Erfurt, Thüringen, Germany
+          </span>
         </motion.div>
 
         {/* Name with letter animation */}
