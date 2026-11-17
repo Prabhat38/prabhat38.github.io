@@ -81,15 +81,15 @@ export function About() {
               {ABOUT.summary}
             </p>
             <p>
-              The work is concrete: a catalog API at 5,000 RPS with zero unplanned downtime over three years of my
-              ownership; a Percolator-based fee engine at P99 under 10ms that enables ₹100M+ in annual revenue;
+              The work was concrete: the admin service behind a catalog API running at 5,000 RPS; a
+              Percolator-based fee engine at P99 under 10ms that enabled ₹100M+ in annual revenue;
               an SMS parsing pipeline at 10K msg/s where I recommended shutting down the initial approach at 10%
               accuracy and rebuilt it with a custom NER model that reached 80%.
             </p>
             <p>
               I design for the failure case first — tiered fallbacks, circuit breakers, retry queues, dead-letter
               handling — because in payment infrastructure, graceful degradation is the baseline expectation, not a
-              nice-to-have. I set up the observability stack before go-live on every service I own: dashboards,
+              nice-to-have. I set up the observability stack before go-live on every service I owned: dashboards,
               alerts, and runbooks that explain the why, not just the what.
             </p>
             <p>

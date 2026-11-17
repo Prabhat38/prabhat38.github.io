@@ -70,15 +70,14 @@ export const EXPERIENCE: ExperienceEntry[] = [
     period: 'Nov 2021 – Mar 2023',
     current: false,
     bullets: [
-      'Built Digital Catalog Service at 5,000 RPS — 3-tier fallback (Aerospike → ES → MySQL) at P99 6–25ms; zero unplanned downtime over 3 years',
       'Built Mobile Number Detection Service using parallel Telecom API calls with early cancellation; 20% recharge conversion improvement',
       'Implemented Merchant Notification Service for ~1,300 enterprise merchants with per-merchant failure isolation and config-driven retry consumer',
       'Implemented circuit breaker patterns (Resilience4j) and Kafka notification pipelines with at-least-once delivery',
     ],
     metrics: [
-      { label: 'RPS', value: '5,000', suffix: '' },
       { label: 'Conversion Gain', value: '20', suffix: '%' },
       { label: 'Merchants', value: '1,300', suffix: '+' },
+      { label: 'P99 Latency', value: '500', suffix: 'ms' },
     ],
     tags: ['Kafka', 'Cassandra', 'Java', 'Node.js', 'Spring Boot', 'Resilience4j', 'Aerospike', 'MySQL'],
   },
@@ -91,12 +90,14 @@ export const EXPERIENCE: ExperienceEntry[] = [
     period: 'Sep 2018 – Oct 2021',
     current: false,
     bullets: [
+      'Built the admin service for Digital Catalog end-to-end — CRUD with audit logging, bulk CSV and image ingestion, and Kafka-driven Elasticsearch propagation — plus features and REST APIs on the client-facing service running at 5,000 RPS',
       'Developed REST APIs for recharge and bill payment flows serving millions of daily active users',
       'Applied CQRS pattern to separate read/write paths, improving query performance significantly',
       'Optimized Elasticsearch indices and queries — achieved 25% P99 latency reduction',
       'Improved service reliability by 50% through systematic root-cause analysis and Prometheus/Grafana monitoring',
     ],
     metrics: [
+      { label: 'RPS', value: '5,000', suffix: '' },
       { label: 'Latency Reduction', value: '25', suffix: '%' },
       { label: 'Reliability Gain', value: '50', suffix: '%' },
     ],
@@ -170,10 +171,10 @@ export const SKILLS: SkillCategory[] = [
 export const PROJECTS: Project[] = [
   {
     id: 'digital-catalog',
-    title: 'Digital Catalog Service',
-    description: 'Revenue-critical metadata service at 5,000 RPS with a 3-tier fallback — zero unplanned downtime over 3 years.',
+    title: 'Digital Catalog — Admin Service & APIs',
+    description: 'Built the admin service, and client-facing REST APIs, for a metadata service running at 5,000 RPS behind bill payment flows.',
     longDescription:
-      'Pre-transaction metadata service handling 5,000 RPS at P99 6–25ms, directly unblocking ₹15M/day in bill payment transactions. Three-tier fallback: Aerospike → Elasticsearch → MySQL. Full ownership for 7 years including JVM heap crisis resolution and ES latency incident response.',
+      'Digital Catalog was a pre-transaction metadata service handling 5,000 RPS at P99 6–25ms behind ₹15M/day in bill payment transactions, served through a three-tier Aerospike → Elasticsearch → MySQL fallback. I built its admin service end-to-end — CRUD with audit logging, bulk CSV and image ingestion, Kafka-driven Elasticsearch propagation, and cron reconciliation — and delivered features and REST APIs on the client-facing service.',
     metrics: [
       { label: 'Throughput', value: '5K', suffix: ' RPS' },
       { label: 'P99 Latency', value: '6–25', suffix: 'ms' },
@@ -186,36 +187,37 @@ export const PROJECTS: Project[] = [
     archDiagramPath: '/arch-animations/project-1-digital-catalog.html',
     contributions: [
       {
-        heading: 'Ownership & Leadership',
+        heading: 'My Scope',
         points: [
-          'Lead engineer on a 3-person team; full technical ownership for 7 years — accountable for all architectural decisions, incident response, and cross-team coordination',
-          'Maintained zero unplanned downtime over 3 years on a service directly unblocking ₹15M/day in bill payment revenue',
+          'Built the admin service end-to-end — every admin capability below was mine, from API design through to production',
+          'Delivered features and REST APIs on the client-facing read service alongside the wider team that owned it',
+          'Worked on this as a Software Engineer, on a service carrying ₹15M/day in bill payment transactions',
         ],
       },
       {
-        heading: 'Architecture & Reliability',
+        heading: 'Client-Facing Service — Context & My APIs',
         points: [
-          'Engineered a three-tier fallback: Aerospike primary cache → Elasticsearch → Aerospike 24h stale-safe fallback → MySQL as last resort',
-          'Fallback triggers automatically on ES connection failure or timeout, keeping latency-sensitive client traffic away from MySQL',
-          'Sustained P99 latencies of 6–25ms at 5,000 RPS using Aerospike as distributed cache',
+          'Reads were served through a three-tier fallback: Aerospike primary cache → Elasticsearch → Aerospike 24h stale-safe fallback → MySQL as last resort',
+          'The fallback engaged automatically on Elasticsearch connection failure or timeout, keeping latency-sensitive client traffic away from MySQL',
+          'The service sustained P99 latencies of 6–25ms at 5,000 RPS with Aerospike as the distributed cache layer',
         ],
       },
       {
-        heading: 'Feature Implementation',
+        heading: 'Admin Service — Built End-to-End',
         points: [
-          'Admin CRUD APIs with full audit logging: captures previous state, new state, actor identity, and timestamp — stored in ES with monthly index rotation',
-          '100MB / 100K-record CSV bulk upload pipeline: S3 storage → MySQL tracking → async processor → ES propagation via Kafka → email notification on completion',
-          'Kafka-based ES sync with manual offset commits and ID-based partition routing: prevents premature acknowledgement, guarantees per-biller message ordering',
-          'Bulk image upload pipeline: images stored in S3, paths persisted in MySQL, propagated to ES via Kafka — same pipeline as CRUD',
-          'Cron-driven automation for scheduled biller activation/deactivation and periodic ES–MySQL data consistency reconciliation',
+          'Admin CRUD APIs with full audit logging: captured previous state, new state, actor identity, and timestamp — stored in Elasticsearch with monthly index rotation',
+          '100MB / 100K-record CSV bulk upload pipeline: S3 storage → MySQL tracking → async processor → Elasticsearch propagation via Kafka → email notification on completion',
+          'Kafka-based Elasticsearch sync with manual offset commits and ID-based partition routing: prevented premature acknowledgement and guaranteed per-biller message ordering',
+          'Bulk image upload pipeline: images stored in S3, paths persisted in MySQL, propagated to Elasticsearch via Kafka — same pipeline as CRUD',
+          'Cron-driven automation for scheduled biller activation/deactivation and periodic Elasticsearch–MySQL data consistency reconciliation',
         ],
       },
       {
         heading: 'Observability & Incident Response',
         points: [
-          'Diagnosed and resolved a production JVM heap crisis: horizontal scale-out for immediate stabilisation, root-caused via GC log analysis, permanently fixed via heap parameter tuning',
-          'Investigated ES latency anomaly (P99 spiking from 25ms to 10–50s): correlated Grafana dashboards and debug logs to isolate root cause to ES layer, ruled out network, coordinated node restart',
-          'Configured full observability stack: Prometheus, Grafana, Datadog, PagerDuty, CloudWatch, and Slack alert channels',
+          'Diagnosed and resolved a production JVM heap crisis: horizontal scale-out for immediate stabilisation, root-caused via GC log analysis, permanently fixed through heap parameter tuning',
+          'Investigated an Elasticsearch latency anomaly (P99 spiking from 25ms to 10–50s): correlated Grafana dashboards and debug logs to isolate the cause to the Elasticsearch layer, ruled out the network, and coordinated a node restart',
+          'Configured the observability stack: Prometheus, Grafana, Datadog, PagerDuty, CloudWatch, and Slack alert channels',
         ],
       },
     ],
@@ -339,7 +341,7 @@ export const PROJECTS: Project[] = [
       {
         heading: 'Ownership & Architecture',
         points: [
-          'Designed and built from scratch on a 3-person team; sole architect and current owner — all features, incident response, and observability',
+          'Designed and built from scratch on a 3-person team; sole architect and owner until I left — all features, incident response, and observability',
           'Designed the full system: dual-layer Aerospike caching, circuit breaker config, telecom/static plan merge logic, async ES write pipeline',
         ],
       },
