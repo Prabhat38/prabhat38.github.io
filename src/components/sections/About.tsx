@@ -99,12 +99,6 @@ export function About() {
             </p>
           </div>
 
-          {/* Education */}
-          <div className="mt-8 p-5 rounded-xl border border-white/8 bg-white/[0.02]">
-            <p className="text-xs font-mono text-[#00D9FF] tracking-widest uppercase mb-2">Education</p>
-            <p className="text-white font-semibold">B.Tech — Computer Science</p>
-            <p className="text-[#8892A4] text-sm">Graphic Era University · CGPA 8.61</p>
-          </div>
         </motion.div>
 
         {/* Right: Metrics grid */}

@@ -6,9 +6,9 @@ export const ABOUT = {
   company: 'Paytm',
   location: 'Noida, India',
   summary:
-    'Seven years. One company. Three roles. I joined Paytm in 2018 as a fresh graduate and earned my way to ' +
+    'Seven years at Paytm. Three roles. I joined as a fresh graduate in 2018 and earned my way to ' +
     'Technical Lead by taking ownership of the systems I built — designing them, operating them, ' +
-    'and staying accountable for them long after launch.',
+    'and staying accountable for them long after launch. Now pursuing a Masters in Software Engineering.',
   metrics: [
     { label: 'Years at Paytm',          value: '7',   suffix: '+' },
     { label: 'Roles Progressed Through', value: '3',   suffix: ''  },
@@ -19,11 +19,34 @@ export const ABOUT = {
 
 export const EXPERIENCE: ExperienceEntry[] = [
   {
+    id: 'msc-erfurt',
+    type: 'education',
+    role: 'MSc Software Engineering',
+    company: 'Fachhochschule Erfurt',
+    period: 'Oct 2026 – Present',
+    current: true,
+    bullets: [],
+    metrics: [],
+    tags: [],
+  },
+  {
+    id: 'career-break',
+    type: 'break',
+    role: 'Career Break',
+    company: '',
+    period: 'Aug 2025 – Sep 2026',
+    current: false,
+    bullets: ['Post-layoff career break'],
+    metrics: [],
+    tags: [],
+  },
+  {
     id: 'tl-paytm',
+    type: 'work',
     role: 'Technical Lead',
     company: 'Paytm',
-    period: 'Apr 2023 – Present',
-    current: true,
+    period: 'Apr 2023 – Jul 2025',
+    current: false,
     bullets: [
       'Designed real-time SMS parsing pipeline ingesting 10K msg/sec with custom-trained NER models (80% accuracy), generating ₹5M revenue in first 6 months',
       'Architected Platform Fee Calculation Service using Elasticsearch Percolator — 1,000 RPS at P99 <10ms, enabling ₹100M+ annual fee revenue',
@@ -42,6 +65,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
   },
   {
     id: 'sse-paytm',
+    type: 'work',
     role: 'Senior Software Engineer',
     company: 'Paytm',
     period: 'Nov 2021 – Mar 2023',
@@ -61,6 +85,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
   },
   {
     id: 'swe-paytm',
+    type: 'work',
     role: 'Software Engineer',
     company: 'Paytm',
     period: 'Sep 2018 – Oct 2021',
@@ -76,6 +101,17 @@ export const EXPERIENCE: ExperienceEntry[] = [
       { label: 'Reliability Gain', value: '50', suffix: '%' },
     ],
     tags: ['Java', 'Node.js', 'Spring Boot', 'Elasticsearch', 'Prometheus', 'Grafana', 'MySQL'],
+  },
+  {
+    id: 'btech-geu',
+    type: 'education',
+    role: 'B.Tech — Computer Science',
+    company: 'Graphic Era University',
+    period: 'Jul 2014 – Jun 2018',
+    current: false,
+    bullets: ['CGPA 8.61'],
+    metrics: [],
+    tags: [],
   },
 ];
 

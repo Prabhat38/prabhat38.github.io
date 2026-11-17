@@ -11,6 +11,7 @@ export interface TechTag {
 
 export interface ExperienceEntry {
   id: string;
+  type?: 'work' | 'break' | 'education';
   role: string;
   company: string;
   period: string;
