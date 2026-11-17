@@ -16,6 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://prabhat38.github.io'),
   title: 'Prabhat Kumar — Backend Engineer',
   description:
     '7 years at Paytm building distributed backend systems — Kafka pipelines, real-time event processing, and payment infrastructure at scale. Currently pursuing an MSc in Software Engineering at Fachhochschule Erfurt, Germany.',
@@ -32,11 +33,30 @@ export const metadata: Metadata = {
     'Germany',
   ],
   authors: [{ name: 'Prabhat Kumar' }],
+  alternates: { canonical: '/' },
   openGraph: {
     title: 'Prabhat Kumar — Backend Engineer',
     description:
       '7 years at Paytm in distributed backend systems. Now an MSc Software Engineering student at Fachhochschule Erfurt, Germany.',
+    url: '/',
+    siteName: 'Prabhat Kumar',
     type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Prabhat Kumar — Backend Engineer, distributed systems and payments',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Prabhat Kumar — Backend Engineer',
+    description:
+      '7 years at Paytm in distributed backend systems. Now an MSc Software Engineering student at Fachhochschule Erfurt, Germany.',
+    images: ['/og-image.png'],
   },
 };
 
