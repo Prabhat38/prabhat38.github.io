@@ -93,7 +93,7 @@ export function About() {
               alerts, and runbooks that explain the why, not just the what.
             </p>
             <p>
-              Based in <span className="text-[#00D9FF]">Erfurt, Germany</span>. Available now for
+              Based in <span className="text-[#00D9FF]">Erfurt, Thüringen, Germany</span>. Available now for
               working student roles, internships, and master&apos;s thesis projects alongside my
               studies — and for full-time backend engineering in the EU once I graduate.
             </p>

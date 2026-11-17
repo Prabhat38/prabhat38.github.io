@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://prabhat38.github.io'),
   title: 'Prabhat Kumar — Backend Engineer, ex-Paytm Technical Lead',
   description:
-    '7 years at Paytm building distributed backend systems — Kafka pipelines, real-time event processing, and payment infrastructure at scale. Currently pursuing an MSc in Software Engineering at Fachhochschule Erfurt, Germany.',
+    'Backend engineer, 7 years at Paytm building distributed systems — Kafka, Elasticsearch, payments. Now an M.Sc. student at Fachhochschule Erfurt, Germany.',
   keywords: [
     'Prabhat Kumar',
     'Software Engineer',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Prabhat Kumar — Backend Engineer, ex-Paytm Technical Lead',
     description:
-      '7 years at Paytm in distributed backend systems. Now an MSc Software Engineering student at Fachhochschule Erfurt, Germany.',
+      '7 years at Paytm in distributed backend systems. Now an M.Sc. Software Engineering student at Fachhochschule Erfurt, Germany.',
     url: '/',
     siteName: 'Prabhat Kumar',
     type: 'website',
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Prabhat Kumar — Backend Engineer, ex-Paytm Technical Lead',
     description:
-      '7 years at Paytm in distributed backend systems. Now an MSc Software Engineering student at Fachhochschule Erfurt, Germany.',
+      '7 years at Paytm in distributed backend systems. Now an M.Sc. Software Engineering student at Fachhochschule Erfurt, Germany.',
     images: ['/og-image.png'],
   },
 };

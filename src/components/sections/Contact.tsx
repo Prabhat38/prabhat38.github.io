@@ -52,8 +52,8 @@ export function Contact() {
             payments infrastructure. Best reached by email.
           </p>
           <p className="text-[#8892A4] leading-relaxed mb-6">
-            Based in <span className="text-[#00D9FF]">Erfurt, Germany</span>, studying full-time for
-            an MSc in Software Engineering at Fachhochschule Erfurt.
+            Based in <span className="text-[#00D9FF]">Erfurt, Thüringen, Germany</span>, studying full-time for
+            an M.Sc. in Software Engineering at Fachhochschule Erfurt.
           </p>
           <div className="rounded-xl border border-[rgba(0,217,255,0.2)] bg-[rgba(0,217,255,0.04)] p-5">
             <p className="text-xs font-mono text-[#00D9FF] tracking-widest uppercase mb-3">

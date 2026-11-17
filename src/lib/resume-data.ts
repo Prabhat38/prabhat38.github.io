@@ -6,7 +6,7 @@ export const ABOUT = {
     'Technical Lead by taking ownership of the systems I built — designing them, operating them, ' +
     'and staying accountable for them long after launch. A layoff closed that chapter in 2025. ' +
     'I chose to go deeper rather than sideways: I moved to Germany and am now studying for an ' +
-    'MSc in Software Engineering at Fachhochschule Erfurt, putting formal grounding under seven ' +
+    'M.Sc. in Software Engineering at Fachhochschule Erfurt, putting formal grounding under seven ' +
     'years of production instinct — and building toward backend work with European teams.',
   metrics: [
     { label: 'Years in Production Backend', value: '7', suffix: '' },
@@ -20,7 +20,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
   {
     id: 'msc-erfurt',
     type: 'education',
-    role: 'MSc Software Engineering',
+    role: 'M.Sc. Software Engineering',
     company: 'Fachhochschule Erfurt',
     location: 'Erfurt, Thüringen, Germany',
     period: 'Oct 2026 – Present',
@@ -38,7 +38,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     current: false,
     bullets: [
       'Role eliminated in a company-wide Paytm layoff after seven years',
-      'Relocated to Germany and earned admission to the MSc Software Engineering programme at Fachhochschule Erfurt',
+      'Relocated to Germany and earned admission to the M.Sc. Software Engineering programme at Fachhochschule Erfurt',
     ],
     metrics: [],
     tags: [],
