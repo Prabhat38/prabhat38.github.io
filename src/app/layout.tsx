@@ -16,9 +16,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Prabhat Kumar — Technical Lead',
+  title: 'Prabhat Kumar — Backend Engineer',
   description:
-    'Technical Lead at Paytm. 7+ years building distributed backend systems — Kafka pipelines, real-time event processing, and payment infrastructure at scale.',
+    '7 years at Paytm building distributed backend systems — Kafka pipelines, real-time event processing, and payment infrastructure at scale. Currently pursuing an MSc in Software Engineering at Fachhochschule Erfurt, Germany.',
   keywords: [
     'Prabhat Kumar',
     'Software Engineer',
@@ -28,11 +28,14 @@ export const metadata: Metadata = {
     'Spring Boot',
     'Distributed Systems',
     'Paytm',
+    'Fachhochschule Erfurt',
+    'Germany',
   ],
   authors: [{ name: 'Prabhat Kumar' }],
   openGraph: {
-    title: 'Prabhat Kumar — Technical Lead',
-    description: 'Technical Lead at Paytm. 7+ years in distributed backend systems.',
+    title: 'Prabhat Kumar — Backend Engineer',
+    description:
+      '7 years at Paytm in distributed backend systems. Now an MSc Software Engineering student at Fachhochschule Erfurt, Germany.',
     type: 'website',
   },
 };

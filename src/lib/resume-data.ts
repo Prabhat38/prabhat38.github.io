@@ -2,8 +2,8 @@ import type { ExperienceEntry, Project, SkillCategory, ContactLink, Certificatio
 
 export const ABOUT = {
   name: 'Prabhat Kumar',
-  title: 'Technical Lead · Senior Software Engineer',
-  company: 'Paytm',
+  title: 'Backend Engineer · MSc Software Engineering Student',
+  company: 'Fachhochschule Erfurt',
   location: 'Erfurt, Thüringen, Germany',
   summary:
     'Seven years at Paytm. Three roles. I joined as a fresh graduate in 2018 and earned my way to ' +

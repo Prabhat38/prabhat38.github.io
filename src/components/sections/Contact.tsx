@@ -52,7 +52,7 @@ export function Contact() {
             or potential collaborations. Best reached via email.
           </p>
           <p className="text-[#8892A4] leading-relaxed">
-            Currently based in <span className="text-[#00D9FF]">Noida, India</span> and open
+            Currently based in <span className="text-[#00D9FF]">Erfurt, Germany</span> and open
             to remote roles, consulting, and technical discussions.
           </p>
         </motion.div>
