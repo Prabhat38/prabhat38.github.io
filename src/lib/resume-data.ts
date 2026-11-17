@@ -46,6 +46,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     type: 'work',
     role: 'Technical Lead',
     company: 'Paytm',
+    location: 'India',
     period: 'Apr 2023 – Jul 2025',
     current: false,
     bullets: [
@@ -69,6 +70,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     type: 'work',
     role: 'Senior Software Engineer',
     company: 'Paytm',
+    location: 'India',
     period: 'Nov 2021 – Mar 2023',
     current: false,
     bullets: [
@@ -89,6 +91,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     type: 'work',
     role: 'Software Engineer',
     company: 'Paytm',
+    location: 'India',
     period: 'Sep 2018 – Oct 2021',
     current: false,
     bullets: [
