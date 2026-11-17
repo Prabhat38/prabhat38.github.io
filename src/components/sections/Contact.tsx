@@ -64,7 +64,7 @@ export function Contact() {
                 <span className="text-[#00D9FF] shrink-0">▸</span>
                 <span>
                   <span className="text-white">Working student roles and internships</span> —
-                  available now, alongside my studies
+                  available now, remote anywhere in Germany or on-site around Erfurt
                 </span>
               </li>
               <li className="flex gap-2">
