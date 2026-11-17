@@ -109,7 +109,7 @@ export function SkillSphere({ asBackground = false }: { asBackground?: boolean }
       sy: -y2 * R,
       z2,
       opacity: asBackground
-        ? Math.max(0.04, depth * 0.34 + 0.04)
+        ? Math.max(0.06, depth * 0.5 + 0.06)
         : isHov ? 1 : Math.max(0.06, depth * 0.9 + 0.06),
       scale:   isHov ? 1.3 : 0.72 + depth * 0.45,
       color,

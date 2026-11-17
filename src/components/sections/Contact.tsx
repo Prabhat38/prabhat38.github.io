@@ -33,7 +33,8 @@ export function Contact() {
   const links = useDecodedLinks();
 
   return (
-    <section id="contact" className="section-padding max-w-7xl mx-auto">
+    // overflow-x-clip: the links column enters from translateX(20px)
+    <section id="contact" className="section-padding max-w-7xl mx-auto overflow-x-clip">
       <SectionHeader
         eyebrow="Contact"
         title="Let&apos;s connect"

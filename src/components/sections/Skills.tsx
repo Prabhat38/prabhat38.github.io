@@ -56,6 +56,12 @@ export function Skills() {
                 viewport={{ once: true, margin: '-40px' }}
                 transition={{ duration: 0.55, delay: i * 0.07, ease: [0.33, 1, 0.68, 1] }}
                 className="glass rounded-2xl p-6 border border-white/8 hover:border-[rgba(0,217,255,0.2)] transition-all duration-300"
+                // Lighter than the shared .glass so the sphere behind shows through
+                style={{
+                  background: 'rgba(13, 21, 33, 0.55)',
+                  backdropFilter: 'blur(7px)',
+                  WebkitBackdropFilter: 'blur(7px)',
+                }}
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-9 h-9 rounded-lg bg-[rgba(0,217,255,0.08)] border border-[rgba(0,217,255,0.15)] flex items-center justify-center text-[#00D9FF] font-mono text-sm">

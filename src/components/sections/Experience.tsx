@@ -36,7 +36,12 @@ export function Experience() {
   );
 
   return (
-    <section id="experience" ref={sectionRef} className="section-padding max-w-7xl mx-auto">
+    // overflow-x-clip: cards enter from translateX(20px), which would widen the page
+    <section
+      id="experience"
+      ref={sectionRef}
+      className="section-padding max-w-7xl mx-auto overflow-x-clip"
+    >
       <SectionHeader
         eyebrow="Career"
         title="Seven years, three roles, one reset"

@@ -23,10 +23,9 @@
 
 html {
   scroll-behavior: auto; /* Lenis handles this */
-  /* whileInView entrances start at translateX(20px), which widens the document
-     until they animate in. `clip` contains it without creating a scroll
-     container, so Lenis and sticky children keep working. */
-  overflow-x: clip;
+  /* No overflow clipping here: any non-visible overflow on an ancestor breaks
+     position: sticky for its descendants. The two sections whose entrance
+     animations translate right are clipped individually instead. */
 }
 
 body {

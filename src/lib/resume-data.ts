@@ -1,18 +1,20 @@
 import type { ExperienceEntry, Project, SkillCategory, ContactLink, Certification } from '@/types';
 
 export const ABOUT = {
-  summary:
+  summary: [
     'Seven years at Paytm. Three roles. I joined as a fresh graduate in 2018 and earned my way to ' +
-    'Technical Lead by taking ownership of the systems I built — designing them, operating them, ' +
-    'and staying accountable for them long after launch. A layoff closed that chapter in 2025. ' +
-    'I chose to go deeper rather than sideways: I moved to Germany and am now studying for an ' +
-    'M.Sc. in Software Engineering at Fachhochschule Erfurt, putting formal grounding under seven ' +
-    'years of production instinct — and building toward backend work with European teams.',
+      'Technical Lead by taking ownership of the systems I built — designing them, operating them, ' +
+      'and staying accountable for them long after launch.',
+    'A layoff closed that chapter in 2025. I chose to go deeper rather than sideways: I moved to ' +
+      'Germany and am now studying for an M.Sc. in Software Engineering at Fachhochschule Erfurt, ' +
+      'putting formal grounding under seven years of production instinct — and building toward ' +
+      'backend work with European teams.',
+  ],
   metrics: [
-    { label: 'Years in Production Backend', value: '7', suffix: '' },
-    { label: 'Roles Progressed Through', value: '3',   suffix: ''  },
-    { label: 'Production Systems Built', value: '8',   suffix: ''  },
-    { label: 'NER Model Accuracy',       value: '80',  suffix: '%' },
+    { label: 'Years in Production Backend', value: '7', suffix: ''  },
+    { label: 'Roles Progressed Through',    value: '3', suffix: ''  },
+    { label: 'Production Systems Built',    value: '8', suffix: ''  },
+    { label: 'Engineers Mentored',          value: '3', suffix: ''  },
   ],
 };
 

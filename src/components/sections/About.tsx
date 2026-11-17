@@ -63,10 +63,10 @@ export function About() {
       <SectionHeader
         eyebrow="About Me"
         title="Engineer at scale"
-        subtitle="I build backend infrastructure, ship it to production, and stay accountable for it — not just until launch, but for the years that follow."
+        subtitle="I build backend infrastructure, ship it to production, and stay accountable for it — not just until launch, but for as long as I own it."
       />
 
-      <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-start">
+      <div className="grid md:grid-cols-2 gap-8 md:gap-16">
         {/* Left: Photo + Bio */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
@@ -77,9 +77,11 @@ export function About() {
           <ProfilePhoto />
 
           <div className="space-y-4 text-[#8892A4] leading-relaxed">
-            <p className="text-lg text-white/90">
-              {ABOUT.summary}
-            </p>
+            {ABOUT.summary.map((para, i) => (
+              <p key={i} className={i === 0 ? 'text-lg text-white/90' : 'text-lg text-white/75'}>
+                {para}
+              </p>
+            ))}
             <p>
               The work was concrete: the admin service behind a catalog API running at 5,000 RPS; a
               Percolator-based fee engine at 1,000 RPS and P99 under 10ms that carried €1M+ in annual fee revenue;
@@ -93,25 +95,29 @@ export function About() {
               alerts, and runbooks that explain the why, not just the what.
             </p>
             <p>
-              Based in <span className="text-[#00D9FF]">Erfurt, Thüringen, Germany</span>. Available now for
-              working student roles, internships, and master&apos;s thesis projects alongside my
-              studies — and for full-time backend engineering in the EU once I graduate.
+              Based in <span className="text-[#00D9FF]">Erfurt, Thüringen, Germany</span>, where I&apos;m
+              pairing that experience with formal study — and looking for teams solving problems at
+              a similar scale.
             </p>
           </div>
 
         </motion.div>
 
-        {/* Right: Metrics grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {ABOUT.metrics.map((metric, i) => (
-            <MetricCard
-              key={metric.label}
-              value={metric.value}
-              suffix={metric.suffix}
-              label={metric.label}
-              index={i}
-            />
-          ))}
+        {/* Right: metrics. The column stretches to the row height so the inner
+            grid has room to stick, keeping it beside the prose instead of
+            leaving most of the column empty. */}
+        <div>
+          <div className="grid grid-cols-2 gap-4 md:sticky md:top-28">
+            {ABOUT.metrics.map((metric, i) => (
+              <MetricCard
+                key={metric.label}
+                value={metric.value}
+                suffix={metric.suffix}
+                label={metric.label}
+                index={i}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
