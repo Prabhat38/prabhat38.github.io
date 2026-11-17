@@ -94,7 +94,7 @@ export function About() {
             </p>
             <p>
               Currently based in{' '}
-              <span className="text-[#00D9FF]">Noida, India</span>. Open to backend engineering roles,
+              <span className="text-[#00D9FF]">Erfurt, Germany</span> — pursuing a Masters in Software Engineering at Fachhochschule Erfurt. Open to backend engineering roles,
               technical collaborations, and conversations about distributed systems.
             </p>
           </div>

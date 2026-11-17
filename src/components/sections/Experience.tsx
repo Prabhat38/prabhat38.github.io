@@ -115,6 +115,9 @@ export function Experience() {
                           {entry.company}
                         </p>
                       )}
+                      {entry.location && (
+                        <p className="text-[#8892A4] text-xs mt-0.5">{entry.location}</p>
+                      )}
                     </div>
                     <span className="text-[#8892A4] text-sm font-mono shrink-0">{entry.period}</span>
                   </div>

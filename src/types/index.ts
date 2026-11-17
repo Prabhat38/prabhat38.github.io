@@ -14,6 +14,7 @@ export interface ExperienceEntry {
   type?: 'work' | 'break' | 'education';
   role: string;
   company: string;
+  location?: string;
   period: string;
   current: boolean;
   bullets: string[];

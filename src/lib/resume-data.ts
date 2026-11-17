@@ -4,7 +4,7 @@ export const ABOUT = {
   name: 'Prabhat Kumar',
   title: 'Technical Lead · Senior Software Engineer',
   company: 'Paytm',
-  location: 'Noida, India',
+  location: 'Erfurt, Thüringen, Germany',
   summary:
     'Seven years at Paytm. Three roles. I joined as a fresh graduate in 2018 and earned my way to ' +
     'Technical Lead by taking ownership of the systems I built — designing them, operating them, ' +
@@ -23,6 +23,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     type: 'education',
     role: 'MSc Software Engineering',
     company: 'Fachhochschule Erfurt',
+    location: 'Erfurt, Thüringen, Germany',
     period: 'Oct 2026 – Present',
     current: true,
     bullets: [],
@@ -107,6 +108,7 @@ export const EXPERIENCE: ExperienceEntry[] = [
     type: 'education',
     role: 'B.Tech — Computer Science',
     company: 'Graphic Era University',
+    location: 'Dehradun, Uttarakhand, India',
     period: 'Jul 2014 – Jun 2018',
     current: false,
     bullets: ['CGPA 8.61'],
