@@ -82,7 +82,7 @@ export function About() {
             </p>
             <p>
               The work was concrete: the admin service behind a catalog API running at 5,000 RPS; a
-              Percolator-based fee engine at P99 under 10ms that enabled ₹100M+ in annual revenue;
+              Percolator-based fee engine at 1,000 RPS and P99 under 10ms that carried €1M+ in annual fee revenue;
               an SMS parsing pipeline at 10K msg/s where I recommended shutting down the initial approach at 10%
               accuracy and rebuilt it with a custom NER model that reached 80%.
             </p>
@@ -93,9 +93,9 @@ export function About() {
               alerts, and runbooks that explain the why, not just the what.
             </p>
             <p>
-              Currently based in{' '}
-              <span className="text-[#00D9FF]">Erfurt, Germany</span> — pursuing a Masters in Software Engineering at Fachhochschule Erfurt. Open to backend engineering roles,
-              technical collaborations, and conversations about distributed systems.
+              Based in <span className="text-[#00D9FF]">Erfurt, Germany</span>. Available now for
+              working student roles, internships, and master&apos;s thesis projects alongside my
+              studies — and for full-time backend engineering in the EU once I graduate.
             </p>
           </div>
 

@@ -39,8 +39,8 @@ export function Experience() {
     <section id="experience" ref={sectionRef} className="section-padding max-w-7xl mx-auto">
       <SectionHeader
         eyebrow="Career"
-        title="A decade in the making"
-        subtitle="From computer science graduate to Technical Lead — and back to the classroom. Every role, every step."
+        title="Seven years, three roles, one reset"
+        subtitle="Computer science graduate to Technical Lead at Paytm — then a layoff, a move to Germany, and back to the classroom by choice."
       />
 
       <div className="relative">

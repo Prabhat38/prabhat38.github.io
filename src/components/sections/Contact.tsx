@@ -48,13 +48,45 @@ export function Contact() {
           transition={{ duration: 0.6 }}
         >
           <p className="text-[#8892A4] leading-relaxed mb-6">
-            I&apos;m open to interesting conversations about distributed systems, backend architecture,
-            or potential collaborations. Best reached via email.
+            I&apos;m open to conversations about distributed systems, backend architecture, and
+            payments infrastructure. Best reached by email.
           </p>
-          <p className="text-[#8892A4] leading-relaxed">
-            Currently based in <span className="text-[#00D9FF]">Erfurt, Germany</span> and open
-            to remote roles, consulting, and technical discussions.
+          <p className="text-[#8892A4] leading-relaxed mb-6">
+            Based in <span className="text-[#00D9FF]">Erfurt, Germany</span>, studying full-time for
+            an MSc in Software Engineering at Fachhochschule Erfurt.
           </p>
+          <div className="rounded-xl border border-[rgba(0,217,255,0.2)] bg-[rgba(0,217,255,0.04)] p-5">
+            <p className="text-xs font-mono text-[#00D9FF] tracking-widest uppercase mb-3">
+              What I&apos;m looking for
+            </p>
+            <ul className="space-y-2 text-[#8892A4] text-sm leading-relaxed">
+              <li className="flex gap-2">
+                <span className="text-[#00D9FF] shrink-0">▸</span>
+                <span>
+                  <span className="text-white">Working student roles and internships</span> —
+                  available now, alongside my studies
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-[#00D9FF] shrink-0">▸</span>
+                <span>
+                  <span className="text-white">Master&apos;s thesis projects</span> with a company —
+                  ideally in distributed systems or payments
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-[#00D9FF] shrink-0">▸</span>
+                <span>
+                  <span className="text-white">Full-time backend engineering</span> in Germany or the
+                  EU once I graduate
+                </span>
+              </li>
+            </ul>
+            <p className="text-[#8892A4]/70 text-xs mt-4 leading-relaxed">
+              Seven years of production backend experience. Available up to 20 hours per week during
+              the semester and full-time during semester breaks. I work in English and am learning German.
+            </p>
+          </div>
         </motion.div>
 
         {/* Right: links — rendered only after client-side decode */}

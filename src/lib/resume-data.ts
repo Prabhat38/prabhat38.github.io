@@ -4,11 +4,14 @@ export const ABOUT = {
   summary:
     'Seven years at Paytm. Three roles. I joined as a fresh graduate in 2018 and earned my way to ' +
     'Technical Lead by taking ownership of the systems I built — designing them, operating them, ' +
-    'and staying accountable for them long after launch. Now pursuing a Masters in Software Engineering.',
+    'and staying accountable for them long after launch. A layoff closed that chapter in 2025. ' +
+    'I chose to go deeper rather than sideways: I moved to Germany and am now studying for an ' +
+    'MSc in Software Engineering at Fachhochschule Erfurt, putting formal grounding under seven ' +
+    'years of production instinct — and building toward backend work with European teams.',
   metrics: [
     { label: 'Years at Paytm',          value: '7',   suffix: '+' },
     { label: 'Roles Progressed Through', value: '3',   suffix: ''  },
-    { label: 'Systems Owned End-to-End', value: '8',   suffix: ''  },
+    { label: 'Production Systems Built', value: '8',   suffix: ''  },
     { label: 'NER Model Accuracy',       value: '80',  suffix: '%' },
   ],
 };
@@ -33,7 +36,10 @@ export const EXPERIENCE: ExperienceEntry[] = [
     company: '',
     period: 'Aug 2025 – Sep 2026',
     current: false,
-    bullets: ['Post-layoff career break'],
+    bullets: [
+      'Role eliminated in a company-wide Paytm layoff after seven years',
+      'Relocated to Germany and earned admission to the MSc Software Engineering programme at Fachhochschule Erfurt',
+    ],
     metrics: [],
     tags: [],
   },
@@ -46,17 +52,17 @@ export const EXPERIENCE: ExperienceEntry[] = [
     period: 'Apr 2023 – Jul 2025',
     current: false,
     bullets: [
-      'Designed real-time SMS parsing pipeline ingesting 10K msg/sec with custom-trained NER models (80% accuracy), generating ₹5M revenue in first 6 months',
-      'Architected Platform Fee Calculation Service using Elasticsearch Percolator — 1,000 RPS at P99 <10ms, enabling ₹100M+ annual fee revenue',
+      'Designed real-time SMS parsing pipeline ingesting 10K msg/sec with custom-trained NER models (80% accuracy), opening a new revenue line worth €50K in its first 6 months',
+      'Architected Platform Fee Calculation Service using Elasticsearch Percolator — 1,000 RPS at P99 <10ms, enabling €1M+ in annual fee revenue',
       'Built Recharge Plan Service for 1.5M–3M DAU at 2,000 RPS; dynamic plans drove 10% revenue increase',
       'Designed Autopay Notification Service using ES Percolator rule engine; increased user engagement by 20%',
       'Led Spring Boot 2 → 3 migration of payment-critical services with zero downtime; mentored 3 engineers',
       'Built Aerospike-backed distributed rate limiter for BFF service — atomic per-user counters, 24h rolling window, cache-first design; eliminates external API floods during cache failures',
-      'Led Kafka-based payment mandate service onboarding 50M+ mandates annually, contributing ₹10M in annual revenue',
+      'Led Kafka-based payment mandate service onboarding 50M+ mandates annually, contributing €100K+ in annual revenue',
     ],
     metrics: [
       { label: 'Throughput', value: '10K', suffix: ' msg/s' },
-      { label: 'Revenue Impact', value: '₹100M', suffix: '+' },
+      { label: 'Fee Revenue', value: '€1M', suffix: '+/yr' },
       { label: 'P99 Latency', value: '<10', suffix: 'ms' },
     ],
     tags: ['Kafka', 'Python', 'Java', 'Node.js', 'Spring Boot 3', 'Aerospike', 'Elasticsearch', 'Resilience4j'],
@@ -156,15 +162,21 @@ export const SKILLS: SkillCategory[] = [
   },
   {
     id: 'ai',
-    name: 'AI-assisted Development',
+    name: 'Machine Learning in Production',
     icon: '✦',
-    skills: ['GitHub Copilot', 'Claude', 'ChatGPT', 'AI-Assisted Coding', 'Test Generation', 'Debugging Assistance'],
+    skills: ['Custom NER Models', 'spaCy', 'Training Data Pipelines', 'Model Versioning & Hot-Swap Deployment', 'Accuracy Monitoring & Retraining', 'AI-Assisted Development'],
   },
   {
     id: 'product',
     name: 'Product Engineering',
     icon: '◈',
     skills: ['Feature Rollouts', 'Experimentation', 'Customer-Centric Development', 'Metrics-Driven Decision Making'],
+  },
+  {
+    id: 'languages',
+    name: 'Languages',
+    icon: '⬡',
+    skills: ['English — Professional', 'German — Beginner, actively learning'],
   },
 ];
 
@@ -174,11 +186,11 @@ export const PROJECTS: Project[] = [
     title: 'Digital Catalog — Admin Service & APIs',
     description: 'Built the admin service, and client-facing REST APIs, for a metadata service running at 5,000 RPS behind bill payment flows.',
     longDescription:
-      'Digital Catalog was a pre-transaction metadata service handling 5,000 RPS at P99 6–25ms behind ₹15M/day in bill payment transactions, served through a three-tier Aerospike → Elasticsearch → MySQL fallback. I built its admin service end-to-end — CRUD with audit logging, bulk CSV and image ingestion, Kafka-driven Elasticsearch propagation, and cron reconciliation — and delivered features and REST APIs on the client-facing service.',
+      'Digital Catalog was a pre-transaction metadata service handling 5,000 RPS at P99 6–25ms behind roughly €55M a year in bill payment volume, served through a three-tier Aerospike → Elasticsearch → MySQL fallback. I built its admin service end-to-end — CRUD with audit logging, bulk CSV and image ingestion, Kafka-driven Elasticsearch propagation, and cron reconciliation — and delivered features and REST APIs on the client-facing service.',
     metrics: [
       { label: 'Throughput', value: '5K', suffix: ' RPS' },
       { label: 'P99 Latency', value: '6–25', suffix: 'ms' },
-      { label: 'Daily Revenue', value: '₹15M', suffix: '' },
+      { label: 'Payment Volume', value: '€55M', suffix: '/yr' },
     ],
     techStack: ['Java', 'Node.js', 'Spring Boot', 'MySQL', 'Elasticsearch', 'Aerospike', 'Kafka', 'AWS S3'],
     category: 'backend',
@@ -191,7 +203,7 @@ export const PROJECTS: Project[] = [
         points: [
           'Built the admin service end-to-end — every admin capability below was mine, from API design through to production',
           'Delivered features and REST APIs on the client-facing read service alongside the wider team that owned it',
-          'Worked on this as a Software Engineer, on a service carrying ₹15M/day in bill payment transactions',
+          'Worked on this as a Software Engineer, on a service carrying roughly €55M a year in bill payment volume',
         ],
       },
       {
@@ -227,11 +239,11 @@ export const PROJECTS: Project[] = [
     title: 'Real-time SMS Parsing',
     description: 'End-to-end ML pipeline ingesting 10K msg/sec with custom NER model; 80% extraction accuracy up from 10% baseline.',
     longDescription:
-      'Full pipeline: Kafka ingestion → custom Spacy NER → MySQL storage → Reminder pipeline. Shut down initial regex approach at 10% accuracy; rebuilt with self-hosted NER model (compliance-driven, no third-party LLMs). Two-stage classification+NER pipeline for multi-category support. Config-driven hot-swap model deployment. Credit card category generated ₹5M in first 6 months.',
+      'Full pipeline: Kafka ingestion → custom Spacy NER → MySQL storage → Reminder pipeline. Shut down initial regex approach at 10% accuracy; rebuilt with self-hosted NER model (compliance-driven, no third-party LLMs). Two-stage classification+NER pipeline for multi-category support. Config-driven hot-swap model deployment. The credit card category alone opened a new revenue line worth €50K in its first 6 months.',
     metrics: [
       { label: 'Throughput', value: '10K', suffix: ' msg/s' },
       { label: 'Accuracy', value: '80', suffix: '%' },
-      { label: '6-month Revenue', value: '₹5M', suffix: '' },
+      { label: 'New Revenue Line', value: '€50K', suffix: '/6mo' },
     ],
     techStack: ['Java', 'Spring Boot', 'Kafka', 'Python', 'Flask', 'Spacy', 'MySQL', 'AWS S3'],
     category: 'ml',
@@ -275,11 +287,11 @@ export const PROJECTS: Project[] = [
   {
     id: 'platform-fee',
     title: 'Platform Fee Calculation',
-    description: 'ES Percolator rule engine at 1,000 RPS, P99 <10ms — enabling ₹100M+ annual fee revenue with zero code changes for rule updates.',
+    description: 'ES Percolator rule engine at 1,000 RPS, P99 <10ms — enabling €1M+ in annual fee revenue with zero code changes for rule updates.',
     longDescription:
       'Evaluated 4 rule engine approaches (MySQL, Drools, custom, ES Percolator) before selecting Percolator for inverted-index rule matching. Supports AND/OR composition, slab fees, priority resolution, and a mandatory review-before-activation lifecycle. Zero production incidents since launch — validated through rigorous pre-launch load testing.',
     metrics: [
-      { label: 'Annual Revenue', value: '₹100M', suffix: '+' },
+      { label: 'Annual Revenue', value: '€1M', suffix: '+' },
       { label: 'P99 Latency', value: '<10', suffix: 'ms' },
       { label: 'Throughput', value: '1K', suffix: ' RPS' },
     ],
@@ -307,7 +319,7 @@ export const PROJECTS: Project[] = [
       {
         heading: 'Rule Lifecycle & Safety',
         points: [
-          'Mandatory review-before-activation: all new rules saved with "review" status — never immediately active in a service generating ₹100M+ annually',
+          'Mandatory review-before-activation: all new rules saved with "review" status — never immediately active in a service generating €1M+ in fees annually',
           'Impact preview API: before activation, ops applies the rule\'s fee logic to a sample transaction amount and reviews the calculated output',
           'Admin CRUD APIs (internal, bypassing API Gateway) with role-based access for full rule lifecycle management',
         ],

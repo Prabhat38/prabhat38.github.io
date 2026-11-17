@@ -3,10 +3,10 @@
 import { motion } from 'framer-motion';
 
 const STATS = [
-  { value: '₹100M+', label: 'annual revenue enabled', color: '#00D9FF' },
-  { value: '10K',    label: 'events per second',       color: '#7B61FF' },
-  { value: '50M+',   label: 'mandates per year',       color: '#00D9FF' },
-  { value: '3M+',    label: 'daily active users',      color: '#7B61FF' },
+  { value: '10K',  label: 'events per second',      color: '#00D9FF' },
+  { value: '50M+', label: 'mandates per year',      color: '#7B61FF' },
+  { value: '3M+',  label: 'daily active users',     color: '#00D9FF' },
+  { value: '<10',  label: 'ms P99 at 1,000 RPS',    color: '#7B61FF' },
 ];
 
 export function ImpactStrip() {

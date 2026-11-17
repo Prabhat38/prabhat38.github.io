@@ -7,12 +7,12 @@ import { GlassCard } from './GlassCard';
 
 interface MetricCardProps {
   label: string;
-  value: string;   // e.g. "7", "10K", "₹100M", "3M"
+  value: string;   // e.g. "7", "10K", "€1M", "3M"
   suffix?: string; // e.g. "+", " msg/s", "+"
   index?: number;
 }
 
-// Parse a display string like "₹100M" into { prefix, end, unit }
+// Parse a display string like "€1M" into { prefix, end, unit }
 function parseValue(raw: string) {
   const prefix = raw.match(/^[₹$€£]*/)?.[0] ?? '';
   const rest = raw.slice(prefix.length);

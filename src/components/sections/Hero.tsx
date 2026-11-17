@@ -37,7 +37,7 @@ const fadeUp = {
 
 const STATS = [
   { value: '10K+', unit: 'events/sec' },
-  { value: '₹100M+', unit: 'annual revenue' },
+  { value: '5,000', unit: 'RPS served' },
   { value: '3M+', unit: 'daily users' },
   { value: '50M+', unit: 'mandates/year' },
 ];
