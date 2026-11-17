@@ -91,11 +91,11 @@ export function Hero() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mb-6 flex flex-col items-center gap-2"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,217,255,0.25)] bg-[rgba(0,217,255,0.06)] text-[#00D9FF] text-xs font-mono font-medium tracking-wider">
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full border border-[rgba(0,217,255,0.25)] bg-[rgba(0,217,255,0.06)] text-[#00D9FF] text-sm font-mono font-medium tracking-wide sm:tracking-wider whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00D9FF] animate-pulse" />
             Open to Werkstudent roles
           </span>
-          <span className="text-[#8892A4] text-xs font-mono tracking-wide">
+          <span className="text-[#8892A4] text-sm font-mono tracking-wide">
             Currently located in Erfurt, Thüringen, Germany
           </span>
         </motion.div>
@@ -141,7 +141,7 @@ export function Hero() {
           </p>
           <p className="mt-1.5 text-sm md:text-base text-[#8892A4]">
             Previously Technical Lead at Paytm{' '}
-            <span className="text-[#8892A4]/50">·</span> 7 years in payments infrastructure
+            <span className="text-[#8892A4]/50">·</span> 7 years in production backend
           </p>
         </motion.div>
 
