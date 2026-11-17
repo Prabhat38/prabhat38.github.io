@@ -128,16 +128,22 @@ export function Hero() {
           ))}
         </motion.h1>
 
-        {/* Subtitle */}
-        <motion.p
+        {/* Subtitle: what I am now, then what I did before */}
+        <motion.div
           custom={0.8}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
-          className="mt-4 text-lg md:text-xl text-[#8892A4] font-medium"
+          className="mt-4"
         >
-          Ex-Technical Lead at Paytm · MSc Software Engineering
-        </motion.p>
+          <p className="text-lg md:text-xl text-white/85 font-medium">
+            M.Sc. Software Engineering <span className="text-[#8892A4]">·</span> FH Erfurt
+          </p>
+          <p className="mt-1.5 text-sm md:text-base text-[#8892A4]">
+            Previously Technical Lead at Paytm{' '}
+            <span className="text-[#8892A4]/50">·</span> 7 years in payments infrastructure
+          </p>
+        </motion.div>
 
         {/* Typewriter stat line */}
         <motion.div
