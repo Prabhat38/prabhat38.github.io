@@ -36,10 +36,10 @@ const fadeUp = {
 };
 
 const STATS = [
-  { value: '10K+', unit: 'events/sec' },
   { value: '5,000', unit: 'RPS served' },
-  { value: '3M+', unit: 'daily users' },
-  { value: '50M+', unit: 'mandates/year' },
+  { value: '1,300+', unit: 'merchants served' },
+  { value: '€1M+', unit: 'in annual fees' },
+  { value: '6–25ms', unit: 'P99 latency' },
 ];
 
 export function Hero() {
@@ -82,7 +82,7 @@ export function Hero() {
           className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(0,217,255,0.25)] bg-[rgba(0,217,255,0.06)] text-[#00D9FF] text-xs font-mono font-medium tracking-wider"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#00D9FF] animate-pulse" />
-          Backend Engineer · 7 Years at Paytm · Erfurt, Germany
+          Open to Werkstudent roles · Erfurt, Germany
         </motion.div>
 
         {/* Name with letter animation */}
@@ -113,7 +113,7 @@ export function Hero() {
           animate="visible"
           className="mt-4 text-lg md:text-xl text-[#8892A4] font-medium"
         >
-          Technical Lead → MSc Software Engineering
+          Ex-Technical Lead at Paytm · MSc Software Engineering
         </motion.p>
 
         {/* Typewriter stat line */}

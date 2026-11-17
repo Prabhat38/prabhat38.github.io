@@ -9,7 +9,7 @@ export const ABOUT = {
     'MSc in Software Engineering at Fachhochschule Erfurt, putting formal grounding under seven ' +
     'years of production instinct — and building toward backend work with European teams.',
   metrics: [
-    { label: 'Years at Paytm',          value: '7',   suffix: '+' },
+    { label: 'Years in Production Backend', value: '7', suffix: '' },
     { label: 'Roles Progressed Through', value: '3',   suffix: ''  },
     { label: 'Production Systems Built', value: '8',   suffix: ''  },
     { label: 'NER Model Accuracy',       value: '80',  suffix: '%' },
@@ -127,55 +127,46 @@ export const SKILLS: SkillCategory[] = [
   {
     id: 'backend',
     name: 'Backend',
-    icon: '⟨/⟩',
     skills: ['Java', 'Node.js', 'Python', 'Spring Boot', 'Flask', 'Hibernate/JPA', 'REST APIs', 'Microservices', 'Distributed Systems', 'SOA'],
   },
   {
     id: 'messaging',
     name: 'Messaging & Event-Driven',
-    icon: '↔',
     skills: ['Apache Kafka', 'Change Data Capture', 'Event-Driven Architecture', 'Async Processing'],
   },
   {
     id: 'databases',
     name: 'Databases & Storage',
-    icon: '◫',
     skills: ['SQL', 'MySQL', 'Cassandra', 'Elasticsearch', 'DynamoDB', 'Aerospike', 'Redis', 'Data Modeling', 'Query Optimization'],
   },
   {
     id: 'testing',
     name: 'Testing & Quality',
-    icon: '✓',
     skills: ['JUnit', 'Mockito', 'Integration Testing', 'SonarQube'],
   },
   {
     id: 'observability',
     name: 'Observability & Ops',
-    icon: '◎',
     skills: ['Prometheus', 'Grafana', 'Datadog', 'New Relic', 'Incident Management', 'RCA'],
   },
   {
     id: 'cloud',
     name: 'Cloud & DevOps',
-    icon: '☁',
     skills: ['AWS (EC2, S3, Lambda)', 'Jenkins', 'CI/CD'],
   },
   {
     id: 'ai',
     name: 'Machine Learning in Production',
-    icon: '✦',
     skills: ['Custom NER Models', 'spaCy', 'Training Data Pipelines', 'Model Versioning & Hot-Swap Deployment', 'Accuracy Monitoring & Retraining', 'AI-Assisted Development'],
   },
   {
     id: 'product',
     name: 'Product Engineering',
-    icon: '◈',
     skills: ['Feature Rollouts', 'Experimentation', 'Customer-Centric Development', 'Metrics-Driven Decision Making'],
   },
   {
     id: 'languages',
     name: 'Languages',
-    icon: '⬡',
     skills: ['English — Professional', 'German — Beginner, actively learning'],
   },
 ];

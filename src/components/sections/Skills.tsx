@@ -21,6 +21,7 @@ const ICON_MAP: Record<string, string> = {
   cloud:        '☁',
   ai:           '✦',
   product:      '◈',
+  languages:    '⬡',
 };
 
 export function Skills() {
@@ -51,8 +52,8 @@ export function Skills() {
           </div>
         </div>
 
-        {/* ── Flat grid — mobile fallback ── */}
-        <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
+        {/* ── Category grid — all viewports; the sphere above is decorative ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-2 md:mt-8">
           {SKILLS.map((category, i) => (
             <motion.div
               key={category.id}

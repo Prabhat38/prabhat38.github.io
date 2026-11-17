@@ -19,7 +19,7 @@ export const CATEGORY_META = [
   { id: 'testing',       label: 'Testing & Quality',    color: '#22cc88' },
   { id: 'observability', label: 'Observability',        color: '#ff6611' },
   { id: 'cloud',         label: 'Cloud & DevOps',       color: '#55eebb' },
-  { id: 'ai',            label: 'AI Tools',             color: '#ff44bb' },
+  { id: 'ai',            label: 'ML in Production',     color: '#ff44bb' },
 ];
 
 const SKILLS_FLAT = [
@@ -46,8 +46,8 @@ const SKILLS_FLAT = [
   { name: 'New Relic',      category: 'observability' },
   { name: 'AWS',            category: 'cloud'         },
   { name: 'Jenkins',        category: 'cloud'         },
-  { name: 'GitHub Copilot', category: 'ai'            },
-  { name: 'Claude',         category: 'ai'            },
+  { name: 'spaCy',          category: 'ai'            },
+  { name: 'NER Models',     category: 'ai'            },
 ];
 
 function fibSphere(n: number): [number, number, number][] {
